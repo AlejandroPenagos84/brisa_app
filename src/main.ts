@@ -9,8 +9,13 @@ async function bootstrap() {
 
   // Validates request DTOs with their class-validator decorators.
   // whitelist + forbidNonWhitelisted: fields not declared in the DTO return 400
+  // transform: converts query strings with @Type, e.g. price filters
   app.useGlobalPipes(
-    new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
   );
 
   const swaggerConfig = new DocumentBuilder()

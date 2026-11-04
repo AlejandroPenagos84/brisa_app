@@ -8,6 +8,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -24,6 +25,7 @@ import {
   PropertyDetailsResponse,
 } from '../dto/response/property.response.js';
 import { CreatePropertyRequest } from '../dto/request/create/create-property.request.js';
+import { PropertyFiltersRequest } from '../dto/request/query/property-filters.request.js';
 import { UpdatePropertyRequest } from '../dto/request/update/update-property.request.js';
 import { PropertyHttpMapper } from '../mappers/property-http.mapper.js';
 
@@ -33,13 +35,46 @@ export class PropertyController {
   constructor(private readonly propertyService: PropertyService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List properties with their owner and city' })
+  @ApiOperation({
+    summary: 'List properties, optionally filtered by city, country or price',
+  })
   @ApiOkResponse({
     description: 'List of properties',
     type: [PropertyDetailsResponse],
   })
-  async findAll(): Promise<PropertyDetailsResponse[]> {
-    const properties = await this.propertyService.findAll();
+  async findAll(
+    @Query() filters: PropertyFiltersRequest,
+  ): Promise<PropertyDetailsResponse[]> {
+    const hasFilters =
+      filters.cityId !== undefined ||
+      filters.countryId !== undefined ||
+      filters.minPrice !== undefined ||
+      filters.maxPrice !== undefined;
+
+    const properties = hasFilters
+      ? await this.propertyService.findByFilters(filters)
+      : await this.propertyService.findAll();
+
+    return properties.map((item) =>
+      PropertyHttpMapper.fromDetailsToResponse(item),
+    );
+  }
+
+  @Get('owner/:ownerId')
+  @ApiOperation({ summary: 'List properties by owner' })
+  @ApiParam({
+    name: 'ownerId',
+    description: 'Owner identifier',
+    format: 'uuid',
+  })
+  @ApiOkResponse({
+    description: 'Properties owned by the given owner',
+    type: [PropertyDetailsResponse],
+  })
+  async findByOwnerId(
+    @Param('ownerId', ParseUUIDPipe) ownerId: string,
+  ): Promise<PropertyDetailsResponse[]> {
+    const properties = await this.propertyService.findByOwnerId(ownerId);
     return properties.map((item) =>
       PropertyHttpMapper.fromDetailsToResponse(item),
     );

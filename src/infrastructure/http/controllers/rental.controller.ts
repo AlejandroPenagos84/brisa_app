@@ -57,6 +57,27 @@ export class RentalController {
     );
   }
 
+  @Get('client/:clientId')
+  @ApiOperation({ summary: 'List rentals by client' })
+  @ApiParam({
+    name: 'clientId',
+    description: 'Client identifier',
+    format: 'uuid',
+  })
+  @ApiOkResponse({
+    description: 'Rentals of the given client',
+    type: [RentalDetailsResponse],
+  })
+  async findByClientId(
+    @Param('clientId', ParseUUIDPipe) clientId: string,
+  ): Promise<RentalDetailsResponse[]> {
+    const rentals = await this.rentalService.findByClientId(clientId);
+
+    return rentals.map((item) =>
+      RentalHttpMapper.fromDetailsToResponse(item),
+    );
+  }
+
   @Get(':propertyId/:clientId/:startDate')
   @ApiOperation({ summary: 'Get a rental by its composite key' })
   @ApiParam({
