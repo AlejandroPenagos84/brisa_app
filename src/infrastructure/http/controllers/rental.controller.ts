@@ -122,7 +122,9 @@ export class RentalController {
   @Post()
   @ApiOperation({ summary: 'Create a rental' })
   @ApiCreatedResponse({ description: 'Rental created', type: RentalResponse })
-  @ApiBadRequestResponse({ description: 'Invalid rental dates or data' })
+  @ApiBadRequestResponse({
+    description: 'Invalid rental dates, data or insufficient balance',
+  })
   @ApiNotFoundResponse({ description: 'Client or property not found' })
   @ApiConflictResponse({ description: 'The rental already exists' })
   async create(@Body() request: CreateRentalRequest): Promise<RentalResponse> {

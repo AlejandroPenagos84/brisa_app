@@ -5,8 +5,7 @@ import {
   RentalResponse,
   RentalDetailsResponse,
 } from '../dto/response/rental.response.js';
-import { UpdateRentalRequest } from '../dto/request/update/update-rental.request.js';
-import { omitUndefined, toDate } from './mapping.utils.js';
+import { toDate } from './mapping.utils.js';
 
 export class RentalHttpMapper {
   static fromCreateRequestToDomain(request: CreateRentalRequest): Rental {
@@ -16,17 +15,6 @@ export class RentalHttpMapper {
       toDate(request.startDate),
       toDate(request.endDate),
     );
-  }
-
-  static fromUpdateRequestToData(
-    request: UpdateRentalRequest,
-  ): Partial<ReturnType<Rental['getData']>> {
-    return omitUndefined({
-      propertyId: request.propertyId,
-      clientId: request.clientId,
-      startDate: toDate(request.startDate),
-      endDate: toDate(request.endDate),
-    });
   }
 
   static fromDomainToResponse(rental: Rental): RentalResponse {

@@ -1,3 +1,4 @@
+import { Client } from '@/domain/client.js';
 import { Rental, RentalKey } from '@/domain/rental.js';
 import { UUID } from '@/utils/types.js';
 
@@ -8,7 +9,7 @@ export interface RentalRepository {
   findByClientId(clientId: UUID): Promise<Rental[]>;
   findByKeys(keys: RentalKey[]): Promise<Rental[]>;
   findByKey(key: RentalKey): Promise<Rental | null>;
-  save(rental: Rental): Promise<Rental>;
+  saveWithClient(rental: Rental, client: Client): Promise<Rental>;
   update(key: RentalKey, rental: Rental): Promise<Rental>;
   delete(key: RentalKey): Promise<boolean>;
 }

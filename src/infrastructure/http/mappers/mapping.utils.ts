@@ -1,10 +1,3 @@
-// Keep explicit nulls and zeroes; only undefined means an omitted PATCH field.
-export function omitUndefined<T extends object>(data: T): T {
-  return Object.fromEntries(
-    Object.entries(data).filter(([, value]) => value !== undefined),
-  ) as T;
-}
-
 export function trimText(value: string): string;
 export function trimText(value: string | undefined): string | undefined;
 export function trimText(value: string | undefined): string | undefined {

@@ -2,8 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { RentalRepository } from '@/application/ports/out/repositories/rental-repository.js';
+import { Client } from '@/domain/client.js';
 import { Rental, RentalKey } from '@/domain/rental.js';
+import { ClientEntity } from '@/infrastructure/persistence/entities/client.entity.js';
 import { RentalEntity } from '@/infrastructure/persistence/entities/rental.entity.js';
+import { ClientMapper } from '@/infrastructure/persistence/mapper/client-mapper.js';
 import { RentalMapper } from '@/infrastructure/persistence/mapper/rental-mapper.js';
 import { UUID } from '@/utils/types.js';
 
@@ -40,9 +43,20 @@ export class RentalRepositoryTypeORM implements RentalRepository {
     return entity ? RentalMapper.fromEntityToDomain(entity) : null;
   }
 
-  // insert() fails if the key already exists; save() would overwrite it
-  async save(rental: Rental): Promise<Rental> {
-    await this.repository.insert(RentalMapper.fromDomainToEntity(rental));
+  // insert() fails if the key already exists; save() would overwrite it.
+  // The rental and the charged client are persisted in the same transaction.
+  async saveWithClient(rental: Rental, client: Client): Promise<Rental> {
+    await this.repository.manager.transaction(async (manager) => {
+      await manager.insert(
+        RentalEntity,
+        RentalMapper.fromDomainToEntity(rental),
+      );
+      await manager.save(
+        ClientEntity,
+        ClientMapper.fromDomainToEntity(client),
+      );
+    });
+
     return rental;
   }
 

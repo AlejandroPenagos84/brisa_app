@@ -1,5 +1,6 @@
 import { Rental, type RentalKey } from '@/domain/rental.js';
 import {
+  BadRequestException,
   ConflictException,
   Inject,
   Injectable,
@@ -70,7 +71,20 @@ export class RentalService {
       throw new ConflictException('The rental already exists');
     }
 
-    return this.rentalRepository.save(rental);
+    const nights = Math.round(
+      (rental.getEndDate().getTime() - rental.getStartDate().getTime()) /
+        86_400_000,
+    );
+    const total = Math.round(property.getPrice() * nights * 100) / 100;
+
+    try {
+      client.discount(total);
+    } catch (error) {
+      if (!(error instanceof Error)) throw error;
+      throw new BadRequestException(error.message);
+    }
+
+    return this.rentalRepository.saveWithClient(rental, client);
   }
 
   private async loadDetails(rental: Rental[]): Promise<RentalDetails[]> {
