@@ -11,5 +11,5 @@ export interface RentalRepository {
   findByKey(key: RentalKey): Promise<Rental | null>;
   saveWithClient(rental: Rental, client: Client): Promise<Rental>;
   update(key: RentalKey, rental: Rental): Promise<Rental>;
-  delete(key: RentalKey): Promise<boolean>;
+  deleteWithClient(key: RentalKey, client: Client): Promise<boolean>;
 }

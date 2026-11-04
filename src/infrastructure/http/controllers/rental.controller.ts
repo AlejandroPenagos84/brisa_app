@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   NotFoundException,
   Param,
@@ -117,6 +118,39 @@ export class RentalController {
     }
 
     return RentalHttpMapper.fromDetailsToResponse(details);
+  }
+
+  @Delete(':propertyId/:clientId/:startDate')
+  @ApiOperation({ summary: 'Cancel a rental and refund the client' })
+  @ApiParam({
+    name: 'propertyId',
+    description: 'Rented property identifier',
+    format: 'uuid',
+  })
+  @ApiParam({
+    name: 'clientId',
+    description: 'Client identifier',
+    format: 'uuid',
+  })
+  @ApiParam({
+    name: 'startDate',
+    description: 'Rental start date',
+    example: '2026-11-10',
+    format: 'date',
+  })
+  @ApiOkResponse({
+    description: 'Rental cancelled and charged amount refunded',
+  })
+  @ApiNotFoundResponse({ description: 'Rental not found' })
+  @ApiBadRequestResponse({
+    description: 'The rental has already started or the refund is invalid',
+  })
+  async cancel(
+    @Param('propertyId', ParseUUIDPipe) propertyId: string,
+    @Param('clientId', ParseUUIDPipe) clientId: string,
+    @Param('startDate', new ParseDatePipe()) startDate: Date,
+  ): Promise<void> {
+    await this.rentalService.cancel({ propertyId, clientId, startDate });
   }
 
   @Post()

@@ -8,6 +8,7 @@ import {
   type Relation,
 } from 'typeorm';
 import { ClientEntity } from '@/infrastructure/persistence/entities/client.entity.js';
+import { decimalTransformer } from '@/infrastructure/persistence/entities/decimal.transformer.js';
 import { PropertyEntity } from '@/infrastructure/persistence/entities/property.entity.js';
 
 @Entity({ name: 'rentals' })
@@ -26,6 +27,17 @@ export class RentalEntity {
 
   @Column({ name: 'check_out_date', type: 'date' })
   checkOutDate: string;
+
+  // Amount charged to the client when the rental was created
+  @Column({
+    name: 'charged_amount',
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    default: 0,
+    transformer: decimalTransformer,
+  })
+  chargedAmount: number;
 
   @ManyToOne(() => PropertyEntity, (property) => property.rentals, {
     nullable: false,

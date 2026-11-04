@@ -78,6 +78,7 @@ export class RentalService {
     const total = Math.round(property.getPrice() * nights * 100) / 100;
 
     try {
+      rental.charge(total);
       client.discount(total);
     } catch (error) {
       if (!(error instanceof Error)) throw error;
@@ -85,6 +86,36 @@ export class RentalService {
     }
 
     return this.rentalRepository.saveWithClient(rental, client);
+  }
+
+  async cancel(key: RentalKey): Promise<boolean> {
+    const rental = await this.rentalRepository.findByKey(key);
+    if (!rental) {
+      throw new NotFoundException('Rental not found');
+    }
+
+    if (rental.getStartDate().getTime() <= Date.now()) {
+      throw new BadRequestException('The rental has already started');
+    }
+
+    const [details] = await this.loadDetails([rental]);
+    const { client } = details;
+    const amount = rental.getChargedAmount();
+
+    if (amount <= 0) {
+      throw new BadRequestException(
+        'The rental has no charged amount to refund',
+      );
+    }
+
+    try {
+      client.deposit(amount);
+    } catch (error) {
+      if (!(error instanceof Error)) throw error;
+      throw new BadRequestException(error.message);
+    }
+
+    return this.rentalRepository.deleteWithClient(key, client);
   }
 
   private async loadDetails(rental: Rental[]): Promise<RentalDetails[]> {

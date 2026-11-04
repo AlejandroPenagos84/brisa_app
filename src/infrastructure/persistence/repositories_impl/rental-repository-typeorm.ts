@@ -84,10 +84,24 @@ export class RentalRepositoryTypeORM implements RentalRepository {
     return RentalMapper.fromEntityToDomain(saved);
   }
 
-  async delete(key: RentalKey): Promise<boolean> {
-    const result = await this.repository.delete(
-      RentalMapper.fromKeyToEntityKey(key),
-    );
-    return (result.affected ?? 0) > 0;
+  // The rental is deleted and the refunded client saved in one transaction.
+  async deleteWithClient(key: RentalKey, client: Client): Promise<boolean> {
+    return this.repository.manager.transaction(async (manager) => {
+      const result = await manager.delete(
+        RentalEntity,
+        RentalMapper.fromKeyToEntityKey(key),
+      );
+
+      if ((result.affected ?? 0) === 0) {
+        throw new Error('Rental not found');
+      }
+
+      await manager.save(
+        ClientEntity,
+        ClientMapper.fromDomainToEntity(client),
+      );
+
+      return true;
+    });
   }
 }

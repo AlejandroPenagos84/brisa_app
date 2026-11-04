@@ -8,6 +8,7 @@ export class RentalMapper {
       entity.clientId,
       RentalMapper.fromDateColumn(entity.checkInDate),
       RentalMapper.fromDateColumn(entity.checkOutDate),
+      entity.chargedAmount,
     );
   }
 
@@ -18,6 +19,7 @@ export class RentalMapper {
     entity.clientId = data.clientId;
     entity.checkInDate = RentalMapper.toDateColumn(data.startDate);
     entity.checkOutDate = RentalMapper.toDateColumn(data.endDate);
+    entity.chargedAmount = rental.getChargedAmount();
     return entity;
   }
 

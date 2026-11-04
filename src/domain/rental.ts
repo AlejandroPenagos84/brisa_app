@@ -13,6 +13,7 @@ export class Rental {
     private readonly clientId: UUID,
     private readonly startDate: Date,
     private readonly endDate: Date,
+    private chargedAmount: number = 0,
   ) {
     this.validate();
   }
@@ -38,6 +39,18 @@ export class Rental {
     if (this.startDate.getTime() >= this.endDate.getTime()) {
       throw new Error('The end date must be after the start date');
     }
+
+    if (!Number.isFinite(this.chargedAmount) || this.chargedAmount < 0) {
+      throw new Error('The charged amount is not valid');
+    }
+  }
+
+  charge(amount: number): void {
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new Error('The charge amount is not valid');
+    }
+
+    this.chargedAmount = amount;
   }
 
   getKey(): RentalKey {
@@ -62,6 +75,10 @@ export class Rental {
 
   getEndDate(): Date {
     return new Date(this.endDate.getTime());
+  }
+
+  getChargedAmount(): number {
+    return this.chargedAmount;
   }
 
   getData() {
