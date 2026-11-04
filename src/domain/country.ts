@@ -4,6 +4,14 @@ export class Country {
     private name: string,
   ) {}
 
+  getId(): string {
+    return this.id;
+  }
+
+  getName(): string {
+    return this.name;
+  }
+
   getData() {
     return {
       id: this.id,

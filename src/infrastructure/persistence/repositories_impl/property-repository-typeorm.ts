@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   Between,
+  In,
   FindOperator,
   FindOptionsWhere,
   LessThanOrEqual,
@@ -33,6 +34,13 @@ export class PropertyRepositoryTypeORM implements PropertyRepository {
     @InjectRepository(PropertyEntity)
     private readonly repository: Repository<PropertyEntity>,
   ) {}
+
+  async findByIds(ids: UUID[]): Promise<Property[]> {
+    if (ids.length === 0) return [];
+
+    const entities = await this.repository.findBy({ id: In(ids) });
+    return entities.map((entity) => PropertyMapper.fromEntityToDomain(entity));
+  }
 
   async findAll(): Promise<Property[]> {
     const entities = await this.repository.find();

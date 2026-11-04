@@ -51,12 +51,35 @@ export class Property {
     this.address = address;
   }
 
+  changeArea(area: number): void {
+    if (area <= 0) {
+      throw new Error('The area must be greater than zero');
+    }
+
+    this.area = area;
+  }
+
+  changeNumberOfRooms(numberOfRooms: number): void {
+    if (numberOfRooms < 0) {
+      throw new Error('The number of rooms cannot be negative');
+    }
+    this.numberOfRooms = numberOfRooms;
+  }
+
   changePrice(price: number): void {
     if (price <= 0) {
       throw new Error('The price must be greater than zero');
     }
 
     this.price = price;
+  }
+
+  changeCapacity(capacity: number): void {
+    if (capacity <= 0) {
+      throw new Error('The capacity must be greater than zero');
+    }
+
+    this.capacity = capacity;
   }
 
   deactivate(): void {
@@ -77,6 +100,42 @@ export class Property {
 
   isActive(): boolean {
     return this.status === PropertyStatus.ACTIVE;
+  }
+
+  getId(): UUID {
+    return this.id;
+  }
+
+  getOwnerId(): UUID {
+    return this.ownerId;
+  }
+
+  getCityId(): string {
+    return this.cityId;
+  }
+
+  getAddress(): string {
+    return this.address;
+  }
+
+  getArea(): number {
+    return this.area;
+  }
+
+  getNumberOfRooms(): number {
+    return this.numberOfRooms;
+  }
+
+  getCapacity(): number {
+    return this.capacity;
+  }
+
+  getPrice(): number {
+    return this.price;
+  }
+
+  getStatus(): PropertyStatus {
+    return this.status;
   }
 
   getData() {

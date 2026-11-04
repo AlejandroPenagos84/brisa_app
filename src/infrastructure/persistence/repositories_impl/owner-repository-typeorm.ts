@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { OwnerRepository } from '@/application/ports/out/repositories/owner-repository.js';
 import { Owner } from '@/domain/owner.js';
 import { OwnerEntity } from '@/infrastructure/persistence/entities/owner.entity.js';
@@ -13,6 +13,13 @@ export class OwnerRepositoryTypeORM implements OwnerRepository {
     @InjectRepository(OwnerEntity)
     private readonly repository: Repository<OwnerEntity>,
   ) {}
+
+  async findByIds(ids: UUID[]): Promise<Owner[]> {
+    if (ids.length === 0) return [];
+
+    const entities = await this.repository.findBy({ id: In(ids) });
+    return entities.map((entity) => OwnerMapper.fromEntityToDomain(entity));
+  }
 
   async findAll(): Promise<Owner[]> {
     const entities = await this.repository.find();

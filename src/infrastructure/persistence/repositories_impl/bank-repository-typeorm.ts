@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { BankRepository } from '@/application/ports/out/repositories/bank-repository.js';
 import { Bank } from '@/domain/bank.js';
 import { BankEntity } from '@/infrastructure/persistence/entities/bank.entity.js';
@@ -13,6 +13,13 @@ export class BankRepositoryTypeORM implements BankRepository {
     @InjectRepository(BankEntity)
     private readonly repository: Repository<BankEntity>,
   ) {}
+
+  async findByIds(ids: UUID[]): Promise<Bank[]> {
+    if (ids.length === 0) return [];
+
+    const entities = await this.repository.findBy({ id: In(ids) });
+    return entities.map((entity) => BankMapper.fromEntityToDomain(entity));
+  }
 
   async findAll(): Promise<Bank[]> {
     const entities = await this.repository.find();

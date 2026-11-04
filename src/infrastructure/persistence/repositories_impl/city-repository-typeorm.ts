@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { CityRepository } from '@/application/ports/out/repositories/city-repository.js';
 import { City } from '@/domain/city.js';
 import { CityEntity } from '@/infrastructure/persistence/entities/city.entity.js';
@@ -13,6 +13,13 @@ export class CityRepositoryTypeORM implements CityRepository {
     @InjectRepository(CityEntity)
     private readonly repository: Repository<CityEntity>,
   ) {}
+
+  async findByIds(ids: UUID[]): Promise<City[]> {
+    if (ids.length === 0) return [];
+
+    const entities = await this.repository.findBy({ id: In(ids) });
+    return entities.map((entity) => CityMapper.fromEntityToDomain(entity));
+  }
 
   async findAll(): Promise<City[]> {
     const entities = await this.repository.find();

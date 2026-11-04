@@ -29,6 +29,14 @@ export class Owner {
     }
   }
 
+  changeName(name: string): void {
+    if (!name.trim()) {
+      throw new Error('The name is required');
+    }
+
+    this.name = name;
+  }
+
   changePhone(phone: string): void {
     if (!phone.trim()) {
       throw new Error('The phone is required');
@@ -51,6 +59,26 @@ export class Owner {
     }
 
     this.bankId = bankId;
+  }
+
+  getId(): UUID {
+    return this.id;
+  }
+
+  getName(): string {
+    return this.name;
+  }
+
+  getPhone(): string {
+    return this.phone;
+  }
+
+  getEmail(): string {
+    return this.email;
+  }
+
+  getBankId(): UUID {
+    return this.bankId;
   }
 
   getData() {

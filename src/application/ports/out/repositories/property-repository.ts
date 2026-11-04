@@ -1,6 +1,8 @@
 import { Property } from '@/domain/property.js';
 import { UUID } from '@/utils/types.js';
 
+export const PROPERTY_REPOSITORY = Symbol('PropertyRepository');
+
 export interface PropertyFilters {
   cityId?: UUID;
   countryId?: UUID;
@@ -10,6 +12,7 @@ export interface PropertyFilters {
 
 export interface PropertyRepository {
   findAll(): Promise<Property[]>;
+  findByIds(ids: UUID[]): Promise<Property[]>;
   findById(id: UUID): Promise<Property | null>;
   findByOwnerId(ownerId: UUID): Promise<Property[]>;
   findByFilters(filters: PropertyFilters): Promise<Property[]>;

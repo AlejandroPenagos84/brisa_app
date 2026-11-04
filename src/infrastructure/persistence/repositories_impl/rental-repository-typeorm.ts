@@ -5,6 +5,7 @@ import { RentalRepository } from '@/application/ports/out/repositories/rental-re
 import { Rental, RentalKey } from '@/domain/rental.js';
 import { RentalEntity } from '@/infrastructure/persistence/entities/rental.entity.js';
 import { RentalMapper } from '@/infrastructure/persistence/mapper/rental-mapper.js';
+import { UUID } from '@/utils/types.js';
 
 @Injectable()
 export class RentalRepositoryTypeORM implements RentalRepository {
@@ -15,6 +16,20 @@ export class RentalRepositoryTypeORM implements RentalRepository {
 
   async findAll(): Promise<Rental[]> {
     const entities = await this.repository.find();
+    return entities.map((entity) => RentalMapper.fromEntityToDomain(entity));
+  }
+
+  async findByKeys(keys: RentalKey[]): Promise<Rental[]> {
+    if (keys.length === 0) return [];
+
+    const entities = await this.repository.findBy(
+      keys.map((key) => RentalMapper.fromKeyToEntityKey(key)),
+    );
+    return entities.map((entity) => RentalMapper.fromEntityToDomain(entity));
+  }
+
+  async findByClientId(clientId: UUID): Promise<Rental[]> {
+    const entities = await this.repository.findBy({ clientId });
     return entities.map((entity) => RentalMapper.fromEntityToDomain(entity));
   }
 

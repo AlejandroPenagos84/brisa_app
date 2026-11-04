@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { ClientRepository } from '@/application/ports/out/repositories/client-repository.js';
 import { Client } from '@/domain/client.js';
 import { ClientEntity } from '@/infrastructure/persistence/entities/client.entity.js';
@@ -14,22 +14,11 @@ export class ClientRepositoryTypeORM implements ClientRepository {
     private readonly repository: Repository<ClientEntity>,
   ) {}
 
-  async deposit(id: UUID, amount: number): Promise<Client> {
-    const client = await this.findById(id);
+  async findByIds(ids: UUID[]): Promise<Client[]> {
+    if (ids.length === 0) return [];
 
-    if (!client) throw new Error(`Client with id ${id} not found`);
-    
-    client.deposit(amount);
-    return await this.update(id, client);
-  }
-
-  async discount(id: UUID, amount: number): Promise<Client> {
-    const client = await this.findById(id);
-
-    if (!client) throw new Error(`Client with id ${id} not found`);
-
-    client.discount(amount);
-    return await this.update(id, client);
+    const entities = await this.repository.findBy({ id: In(ids) });
+    return entities.map((entity) => ClientMapper.fromEntityToDomain(entity));
   }
 
   async findAll(): Promise<Client[]> {

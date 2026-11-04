@@ -5,6 +5,18 @@ export class City {
     private countryId: string,
   ) {}
 
+  getId(): string {
+    return this.id;
+  }
+
+  getName(): string {
+    return this.name;
+  }
+
+  getCountryId(): string {
+    return this.countryId;
+  }
+
   getData() {
     return {
       id: this.id,

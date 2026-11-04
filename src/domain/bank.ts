@@ -7,6 +7,18 @@ export class Bank {
     private countryId: string,
   ) {}
 
+  getId(): UUID {
+    return this.id;
+  }
+
+  getName(): string {
+    return this.name;
+  }
+
+  getCountryId(): string {
+    return this.countryId;
+  }
+
   getData() {
     return {
       id: this.id,

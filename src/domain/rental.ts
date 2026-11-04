@@ -48,6 +48,22 @@ export class Rental {
     };
   }
 
+  getPropertyId(): UUID {
+    return this.propertyId;
+  }
+
+  getClientId(): UUID {
+    return this.clientId;
+  }
+
+  getStartDate(): Date {
+    return new Date(this.startDate.getTime());
+  }
+
+  getEndDate(): Date {
+    return new Date(this.endDate.getTime());
+  }
+
   getData() {
     return {
       propertyId: this.propertyId,

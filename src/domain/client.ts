@@ -52,6 +52,22 @@ export class Client {
     }
   }
 
+  changeName(name: string): void {
+    if (!name.trim()) {
+      throw new Error('The name is required');
+    }
+
+    this.name = name;
+  }
+
+  changeCityId(cityId: string): void {
+    if (!cityId.trim()) {
+      throw new Error('The city is not valid');
+    }
+
+    this.cityId = cityId;
+  }
+
   changePhone(phone: string): void {
     if (!phone.trim()) {
       throw new Error('The phone is required');
@@ -132,6 +148,42 @@ export class Client {
 
   private static fromCents(cents: number): number {
     return cents / 100;
+  }
+
+  getId(): UUID {
+    return this.id;
+  }
+
+  getName(): string {
+    return this.name;
+  }
+
+  getPhone(): string {
+    return this.phone;
+  }
+
+  getEmail(): string {
+    return this.email;
+  }
+
+  getCityId(): string {
+    return this.cityId;
+  }
+
+  getBankId(): UUID {
+    return this.bankId;
+  }
+
+  getAccountNumber(): string {
+    return this.accountNumber;
+  }
+
+  getAccountType(): string {
+    return this.accountType;
+  }
+
+  getBalance(): number {
+    return this.balance;
   }
 
   getData() {

@@ -10,6 +10,6 @@ services:
       - "${DB_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
-      - ./script.sql:/docker-entrypoint-initdb.d/script.sql:ro
+      - ./script.sql:/docker-entrypoint-initdb.d/script.sql:ro,z
 volumes:
   postgres_data:

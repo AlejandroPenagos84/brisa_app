@@ -1,13 +1,14 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { OwnerService } from '@/application/owner-service.js';
+import { OwnerService } from '@/application/services/owner-service.js';
 import { OWNER_REPOSITORY } from '@/application/ports/out/repositories/owner-repository.js';
 import { OwnerController } from '@/infrastructure/http/controllers/owner.controller.js';
 import { OwnerEntity } from '@/infrastructure/persistence/entities/owner.entity.js';
 import { OwnerRepositoryTypeORM } from '@/infrastructure/persistence/repositories_impl/owner-repository-typeorm.js';
+import { BankModule } from './bank.module.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([OwnerEntity])],
+  imports: [TypeOrmModule.forFeature([OwnerEntity]), BankModule],
   controllers: [OwnerController],
   providers: [
     { provide: OWNER_REPOSITORY, useClass: OwnerRepositoryTypeORM },

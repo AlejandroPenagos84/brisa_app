@@ -1,8 +1,7 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { entities } from "./persistence/entities/index.js";
+import { entities } from "../infrastructure/persistence/entities/index.js";
 
-console.log("process.env.DB_PASSWORD", process.env.DB_PASSWORD);
 @Module({
     imports: [
       TypeOrmModule.forRoot({

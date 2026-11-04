@@ -1,11 +1,27 @@
+import './env.js';
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
-import { DatabaseModule } from './infrastructure/database.module.js';
-import { OwnerModule } from './infrastructure/owner.module.js';
+import { DatabaseModule } from './modules/database.module.js';
+import { OwnerModule } from './modules/owner.module.js';
+import { BankModule } from './modules/bank.module.js';
+import { CountryModule } from './modules/country.module.js';
+import { CityModule } from './modules/city.module.js';
+import { PropertyModule } from './modules/property.module.js';
+import { ClientModule } from './modules/client.module.js';
+import { RentalModule } from './modules/rental.module.js';
 
 @Module({
-  imports: [DatabaseModule, OwnerModule],
+  imports: [
+    DatabaseModule,
+    CountryModule,
+    CityModule,
+    BankModule,
+    OwnerModule,
+    PropertyModule,
+    ClientModule,
+    RentalModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
