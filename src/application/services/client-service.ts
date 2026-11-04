@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import { Inject, Injectable } from '@nestjs/common';
 import {
   ConflictError,
   NotFoundError,
@@ -9,22 +8,11 @@ import { UUID } from '@/utils/types.js';
 import type { CreateClientCommand } from '../commands/create-client.command.js';
 import type { UpdateClientCommand } from '../commands/update-client.command.js';
 import type { ClientDetails } from '../models/client-details.js';
-import {
-  BANK_REPOSITORY,
-  type BankRepository,
-} from '../ports/out/repositories/bank-repository.js';
-import {
-  CITY_REPOSITORY,
-  type CityRepository,
-} from '../ports/out/repositories/city-repository.js';
-import {
-  CLIENT_REPOSITORY,
-  type ClientRepository,
-} from '../ports/out/repositories/client-repository.js';
-import {
-  COUNTRY_REPOSITORY,
-  type CountryRepository,
-} from '../ports/out/repositories/country-repository.js';
+import type { UnitOfWork } from '../ports/out/repositories/unit-of-work.js';
+import type { BankRepository } from '../ports/out/repositories/bank-repository.js';
+import type { CityRepository } from '../ports/out/repositories/city-repository.js';
+import type { ClientRepository } from '../ports/out/repositories/client-repository.js';
+import type { CountryRepository } from '../ports/out/repositories/country-repository.js';
 
 interface NormalizedClientInput {
   email: string;
@@ -38,17 +26,15 @@ interface ClientUpdateValues {
   bankAccountChanged: boolean;
 }
 
-@Injectable()
+// Plain class: client.module.ts builds it with useFactory, so the
+// application layer does not depend on Nest
 export class ClientService {
   constructor(
-    @Inject(CLIENT_REPOSITORY)
     private readonly clientRepository: ClientRepository,
-    @Inject(CITY_REPOSITORY)
     private readonly cityRepository: CityRepository,
-    @Inject(BANK_REPOSITORY)
     private readonly bankRepository: BankRepository,
-    @Inject(COUNTRY_REPOSITORY)
     private readonly countryRepository: CountryRepository,
+    private readonly unitOfWork: UnitOfWork,
   ) {}
 
   async findByIds(ids: UUID[]): Promise<Client[]> {
@@ -260,19 +246,21 @@ export class ClientService {
   }
 
   async deposit(id: UUID, amount: number): Promise<Client> {
-    const client = await this.getClientOrThrow(id);
-
-    client.deposit(amount);
-
-    return this.clientRepository.update(id, client);
+    return this.unitOfWork.run(async ({ clientsRepository }) => {
+      const client = await clientsRepository.findByIdForUpdate(id);
+      if (!client) throw new NotFoundError(`Client with id ${id} not found`);
+      client.deposit(amount);
+      return clientsRepository.update(id, client);
+    });
   }
 
   async withdraw(id: UUID, amount: number): Promise<Client> {
-    const client = await this.getClientOrThrow(id);
-
-    client.discount(amount);
-
-    return this.clientRepository.update(id, client);
+    return this.unitOfWork.run(async ({ clientsRepository }) => {
+      const client = await clientsRepository.findByIdForUpdate(id);
+      if (!client) throw new NotFoundError(`Client with id ${id} not found`);
+      client.discount(amount);
+      return clientsRepository.update(id, client);
+    });
   }
 
   async delete(id: UUID): Promise<boolean> {

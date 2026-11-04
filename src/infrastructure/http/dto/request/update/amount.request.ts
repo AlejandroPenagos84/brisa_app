@@ -1,7 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNumber, IsPositive, Max } from 'class-validator';
 
-export class ClientAmountRequest {
+// Body for deposits and withdrawals of clients and owners
+export class AmountRequest {
   @ApiProperty({
     description: 'Amount to deposit or withdraw',
     example: 50.25,

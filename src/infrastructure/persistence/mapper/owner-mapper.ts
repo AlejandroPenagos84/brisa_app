@@ -9,6 +9,7 @@ export class OwnerMapper {
       entity.phone,
       entity.email,
       entity.bankId,
+      entity.balance,
     );
   }
 
@@ -20,6 +21,7 @@ export class OwnerMapper {
     entity.phone = data.phone;
     entity.email = data.email;
     entity.bankId = data.bankId;
+    entity.balance = data.balance;
     return entity;
   }
 }

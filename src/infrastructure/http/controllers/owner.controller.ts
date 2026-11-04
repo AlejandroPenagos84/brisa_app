@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiBody,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiNotFoundResponse,
@@ -20,6 +21,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { OwnerService } from '@/application/services/owner-service.js';
+import { AmountRequest } from '@/infrastructure/http/dto/request/update/amount.request.js';
 import { CreateOwnerRequest } from '@/infrastructure/http/dto/request/create/create-owner.request.js';
 import { UpdateOwnerRequest } from '@/infrastructure/http/dto/request/update/update-owner.request.js';
 import { OwnerResponse } from '@/infrastructure/http/dto/response/owner.response.js';
@@ -81,6 +83,46 @@ export class OwnerController {
   ): Promise<OwnerResponse> {
     const command = OwnerHttpMapper.fromUpdateRequestToCommand(request);
     const owner = await this.ownerService.update(id, command);
+    return OwnerHttpMapper.fromDomainToResponse(owner);
+  }
+
+  @Patch(':id/deposit')
+  @ApiOperation({ summary: 'Deposit money into an owner account' })
+  @ApiParam({ name: 'id', description: 'Owner identifier', format: 'uuid' })
+  @ApiBody({ type: AmountRequest })
+  @ApiOkResponse({
+    description: 'Deposit applied and owner returned',
+    type: OwnerResponse,
+  })
+  @ApiBadRequestResponse({ description: 'Invalid amount' })
+  @ApiConflictResponse({
+    description: 'The balance exceeds the maximum allowed',
+  })
+  @ApiNotFoundResponse({ description: 'Owner not found' })
+  async deposit(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() request: AmountRequest,
+  ): Promise<OwnerResponse> {
+    const owner = await this.ownerService.deposit(id, request.amount);
+    return OwnerHttpMapper.fromDomainToResponse(owner);
+  }
+
+  @Patch(':id/withdraw')
+  @ApiOperation({ summary: 'Withdraw money from an owner account' })
+  @ApiParam({ name: 'id', description: 'Owner identifier', format: 'uuid' })
+  @ApiBody({ type: AmountRequest })
+  @ApiOkResponse({
+    description: 'Withdrawal applied and owner returned',
+    type: OwnerResponse,
+  })
+  @ApiBadRequestResponse({ description: 'Invalid amount' })
+  @ApiConflictResponse({ description: 'Insufficient balance' })
+  @ApiNotFoundResponse({ description: 'Owner not found' })
+  async withdraw(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() request: AmountRequest,
+  ): Promise<OwnerResponse> {
+    const owner = await this.ownerService.withdraw(id, request.amount);
     return OwnerHttpMapper.fromDomainToResponse(owner);
   }
 

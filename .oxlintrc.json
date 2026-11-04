@@ -4,6 +4,30 @@
     "typescript/no-explicit-any": "off",
     "typescript/no-floating-promises": "error"
   },
+  "overrides": [
+    {
+      "files": ["src/application/**/*.ts", "src/domain/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@nestjs/*",
+                  "typeorm",
+                  "express",
+                  "@/infrastructure/*",
+                  "@/modules/*"
+                ],
+                "message": "application y domain no pueden depender de frameworks ni de infraestructura"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
   "env": {
     "node": true
   }

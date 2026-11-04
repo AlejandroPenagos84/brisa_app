@@ -3,8 +3,11 @@ import {
   IsEmail,
   IsNotEmpty,
   IsString,
+  IsNumber,
   IsUUID,
+  Max,
   MaxLength,
+  Min,
 } from 'class-validator';
 
 // Body received from the frontend. Max lengths match the owners table.
@@ -46,4 +49,16 @@ export class CreateOwnerRequest {
   })
   @IsUUID()
   bankId: string;
+
+  @ApiProperty({
+    description: 'Initial balance',
+    example: 0,
+    default: 0,
+    minimum: 0,
+    maximum: 9_999_999_999.99,
+  })
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(9_999_999_999.99)
+  balance: number = 0;
 }

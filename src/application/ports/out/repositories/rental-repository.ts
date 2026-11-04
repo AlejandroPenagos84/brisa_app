@@ -1,4 +1,3 @@
-import { Client } from '@/domain/client.js';
 import { Rental, RentalKey } from '@/domain/rental.js';
 import { UUID } from '@/utils/types.js';
 
@@ -20,7 +19,8 @@ export interface RentalRepository {
     endDate: Date,
   ): Promise<boolean>;
   updateStatuses(rentals: Rental[]): Promise<void>;
-  saveWithClient(rental: Rental, client: Client): Promise<Rental>;
+  save(rental: Rental): Promise<Rental>;
   update(key: RentalKey, rental: Rental): Promise<Rental>;
-  deleteWithClient(key: RentalKey, client: Client): Promise<boolean>;
+  // Throws NotFoundError if the rental does not exist
+  delete(key: RentalKey): Promise<boolean>;
 }

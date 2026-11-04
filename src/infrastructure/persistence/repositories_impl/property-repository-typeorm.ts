@@ -1,12 +1,11 @@
-import { businessToday } from '@/utils/business-date.js';
+import { businessToday } from '@/infrastructure/time/business-date.js';
 import { NotFoundError } from '@/application/errors/application-error.js';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import {
   Between,
-  In,
+  EntityManager,
   FindOperator,
   FindOptionsWhere,
+  In,
   LessThan,
   LessThanOrEqual,
   MoreThanOrEqual,
@@ -32,12 +31,12 @@ function priceRange(
   return undefined;
 }
 
-@Injectable()
 export class PropertyRepositoryTypeORM implements PropertyRepository {
-  constructor(
-    @InjectRepository(PropertyEntity)
-    private readonly repository: Repository<PropertyEntity>,
-  ) {}
+  private readonly repository: Repository<PropertyEntity>;
+
+  constructor(private readonly manager: EntityManager) {
+    this.repository = manager.getRepository(PropertyEntity);
+  }
 
   async findByIds(ids: UUID[]): Promise<Property[]> {
     if (ids.length === 0) return [];
@@ -128,7 +127,7 @@ export class PropertyRepositoryTypeORM implements PropertyRepository {
   async deleteWithPastRentals(propertyId: UUID): Promise<boolean> {
     const today = businessToday();
 
-    return this.repository.manager.transaction(async (manager) => {
+    return this.manager.transaction(async (manager) => {
       await manager.delete(RentalEntity, {
         propertyId,
         checkOutDate: LessThan(today),

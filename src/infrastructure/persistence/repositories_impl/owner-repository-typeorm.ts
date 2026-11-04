@@ -1,19 +1,17 @@
 import { NotFoundError } from '@/application/errors/application-error.js';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import { OwnerRepository } from '@/application/ports/out/repositories/owner-repository.js';
 import { Owner } from '@/domain/owner.js';
 import { OwnerEntity } from '@/infrastructure/persistence/entities/owner.entity.js';
 import { OwnerMapper } from '@/infrastructure/persistence/mapper/owner-mapper.js';
 import { UUID } from '@/utils/types.js';
 
-@Injectable()
 export class OwnerRepositoryTypeORM implements OwnerRepository {
-  constructor(
-    @InjectRepository(OwnerEntity)
-    private readonly repository: Repository<OwnerEntity>,
-  ) {}
+  private readonly repository: Repository<OwnerEntity>;
+
+  constructor(private readonly manager: EntityManager) {
+    this.repository = manager.getRepository(OwnerEntity);
+  }
 
   async findByIds(ids: UUID[]): Promise<Owner[]> {
     if (ids.length === 0) return [];
@@ -29,6 +27,14 @@ export class OwnerRepositoryTypeORM implements OwnerRepository {
 
   async findById(id: UUID): Promise<Owner | null> {
     const entity = await this.repository.findOneBy({ id });
+    return entity ? OwnerMapper.fromEntityToDomain(entity) : null;
+  }
+
+  async findByIdForUpdate(id: UUID): Promise<Owner | null> {
+    const entity = await this.repository.findOne({
+      where: { id },
+      lock: { mode: 'pessimistic_write' }, // SELECT ... FOR UPDATE
+    });
     return entity ? OwnerMapper.fromEntityToDomain(entity) : null;
   }
 

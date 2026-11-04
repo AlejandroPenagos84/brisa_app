@@ -1,8 +1,6 @@
-import { businessToday } from '@/utils/business-date.js';
+import { businessToday } from '@/infrastructure/time/business-date.js';
 import { NotFoundError } from '@/application/errors/application-error.js';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { In, LessThan, Repository } from 'typeorm';
+import { EntityManager, In, LessThan, Repository } from 'typeorm';
 import { ClientRepository } from '@/application/ports/out/repositories/client-repository.js';
 import { Client } from '@/domain/client.js';
 import { ClientEntity } from '@/infrastructure/persistence/entities/client.entity.js';
@@ -10,12 +8,20 @@ import { RentalEntity } from '@/infrastructure/persistence/entities/rental.entit
 import { ClientMapper } from '@/infrastructure/persistence/mapper/client-mapper.js';
 import { UUID } from '@/utils/types.js';
 
-@Injectable()
 export class ClientRepositoryTypeORM implements ClientRepository {
-  constructor(
-    @InjectRepository(ClientEntity)
-    private readonly repository: Repository<ClientEntity>,
-  ) {}
+  private readonly repository: Repository<ClientEntity>;
+
+  constructor(private readonly manager: EntityManager) {
+    this.repository = manager.getRepository(ClientEntity);
+  }
+  
+  async findByIdForUpdate(id: UUID): Promise<Client | null> {
+    const entity = await this.repository.findOne({
+      where: { id },
+      lock: { mode: 'pessimistic_write' }, // SELECT ... FOR UPDATE
+    });
+    return entity ? ClientMapper.fromEntityToDomain(entity) : null;
+  }
 
   async findByIds(ids: UUID[]): Promise<Client[]> {
     if (ids.length === 0) return [];
@@ -102,7 +108,7 @@ export class ClientRepositoryTypeORM implements ClientRepository {
   async deleteWithFinishedRentals(clientId: UUID): Promise<boolean> {
     const today = businessToday();
 
-    return this.repository.manager.transaction(async (manager) => {
+    return this.manager.transaction(async (manager) => {
       await manager.delete(RentalEntity, {
         clientId,
         checkOutDate: LessThan(today),

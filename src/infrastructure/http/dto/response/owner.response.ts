@@ -31,6 +31,13 @@ export class OwnerResponse {
   bankId: string;
 
   @ApiPropertyOptional({
+    description:
+      'Owner balance. Only included in /owners responses, not inside properties.',
+    example: 1500.5,
+  })
+  balance?: number;
+
+  @ApiPropertyOptional({
     description: 'Bank summary. Included in the create response.',
     type: BankSummaryResponse,
   })

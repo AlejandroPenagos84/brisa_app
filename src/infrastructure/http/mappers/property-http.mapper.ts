@@ -60,7 +60,7 @@ export class PropertyHttpMapper {
     const { property, owner, ownerBank, city } = details;
     return {
       ...this.fromDomainToResponse(property),
-      owner: OwnerHttpMapper.fromDomainWithBankToResponse(owner, ownerBank),
+      owner: OwnerHttpMapper.fromDomainWithBankToPublicResponse(owner, ownerBank),
       city: { id: city.getId(), name: city.getName() },
     };
   }

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { RentalService } from '@/application/services/rental-service.js';
-import { businessTimeZone } from '@/utils/business-date.js';
+import { businessTimeZone } from '@/infrastructure/time/business-date.js';
 
 @Injectable()
 export class RentalStatusScheduler {

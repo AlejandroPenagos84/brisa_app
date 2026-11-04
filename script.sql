@@ -42,7 +42,11 @@ CREATE TABLE owners (
     email VARCHAR(150) NOT NULL,
     bank_id VARCHAR(36) NOT NULL,
 
-    FOREIGN KEY (bank_id) REFERENCES banks(id)
+    -- Money received from rentals of the owner's properties
+    balance DECIMAL(12,2) NOT NULL DEFAULT 0,
+
+    FOREIGN KEY (bank_id) REFERENCES banks(id),
+    CONSTRAINT CHK_owners_balance CHECK (balance >= 0)
 );
 
 CREATE UNIQUE INDEX UQ_owners_email_lower ON owners (LOWER(email));
@@ -223,3 +227,11 @@ UPDATE rentals SET status = CASE
     WHEN CURRENT_DATE >= check_out_date THEN 'FINISHED'
     ELSE 'ACTIVE'
 END;
+
+-- Each owner receives what was charged for the rentals of their properties
+UPDATE owners o SET balance = COALESCE((
+    SELECT SUM(r.charged_amount)
+    FROM rentals r
+    JOIN properties p ON p.id = r.property_id
+    WHERE p.owner_id = o.id
+), 0);

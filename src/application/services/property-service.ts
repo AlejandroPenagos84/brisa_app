@@ -1,12 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import { Inject, Injectable } from '@nestjs/common';
 import {
   ConflictError,
   NotFoundError,
 } from '@/application/errors/application-error.js';
 import type { CreatePropertyCommand } from '../commands/create-property.command.js';
 import {
-  PROPERTY_REPOSITORY,
   PropertyFilters,
   type PropertyRepository,
 } from '@/application/ports/out/repositories/property-repository.js';
@@ -14,29 +12,17 @@ import { Property, PropertyStatus } from '@/domain/property.js';
 import { UUID } from '@/utils/types.js';
 import { UpdatePropertyCommand } from '../commands/update-property.command.js';
 import type { PropertyDetails } from '../models/property-details.js';
-import {
-  OWNER_REPOSITORY,
-  type OwnerRepository,
-} from '../ports/out/repositories/owner-repository.js';
-import {
-  BANK_REPOSITORY,
-  type BankRepository,
-} from '../ports/out/repositories/bank-repository.js';
-import {
-  CITY_REPOSITORY,
-  type CityRepository,
-} from '../ports/out/repositories/city-repository.js';
+import type { OwnerRepository } from '../ports/out/repositories/owner-repository.js';
+import type { BankRepository } from '../ports/out/repositories/bank-repository.js';
+import type { CityRepository } from '../ports/out/repositories/city-repository.js';
 
-@Injectable()
+// Plain class: property.module.ts builds it with useFactory, so the
+// application layer does not depend on Nest
 export class PropertyService {
   constructor(
-    @Inject(PROPERTY_REPOSITORY)
     private readonly propertyRepository: PropertyRepository,
-    @Inject(OWNER_REPOSITORY)
     private readonly ownerRepository: OwnerRepository,
-    @Inject(BANK_REPOSITORY)
     private readonly bankRepository: BankRepository,
-    @Inject(CITY_REPOSITORY)
     private readonly cityRepository: CityRepository,
   ) {}
 

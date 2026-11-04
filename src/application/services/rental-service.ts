@@ -1,34 +1,28 @@
 import type { Client } from '@/domain/client.js';
+import type { Owner } from '@/domain/owner.js';
 import type { Property } from '@/domain/property.js';
-import {
-  Rental,
-  RentalStatus,
-  type RentalKey,
-} from '@/domain/rental.js';
-import { Inject, Injectable } from '@nestjs/common';
+import { Rental, RentalStatus, type RentalKey } from '@/domain/rental.js';
 import {
   ConflictError,
   NotFoundError,
 } from '@/application/errors/application-error.js';
-import {
-  RENTAL_REPOSITORY,
-  type RentalRepository,
-} from '@/application/ports/out/repositories/rental-repository.js';
+import type { RentalRepository } from '@/application/ports/out/repositories/rental-repository.js';
 import { UUID } from '@/utils/types.js';
-import { businessTodayAsDate } from '@/utils/business-date.js';
 import { RentalDetails } from '../models/rental-details.js';
-import { CLIENT_REPOSITORY, type ClientRepository } from '../ports/out/repositories/client-repository.js';
-import { PROPERTY_REPOSITORY, type PropertyRepository } from '../ports/out/repositories/property-repository.js';
+import type { ClientRepository } from '../ports/out/repositories/client-repository.js';
+import type { PropertyRepository } from '../ports/out/repositories/property-repository.js';
+import type { UnitOfWork } from '../ports/out/repositories/unit-of-work.js';
+import type { Clock } from '../ports/out/clock.js';
 
-@Injectable()
+// Plain class: rental.module.ts builds it with useFactory, so the
+// application layer does not depend on Nest
 export class RentalService {
   constructor(
-    @Inject(RENTAL_REPOSITORY)
     private readonly rentalRepository: RentalRepository,
-    @Inject(CLIENT_REPOSITORY)
     private readonly clientRepository: ClientRepository,
-    @Inject(PROPERTY_REPOSITORY)
     private readonly propertyRepository: PropertyRepository,
+    private readonly unitOfWork: UnitOfWork,
+    private readonly clock: Clock,
   ) {}
 
   async findByKeys(keys: RentalKey[]): Promise<Rental[]> {
@@ -58,40 +52,54 @@ export class RentalService {
     return this.refreshStatuses(rentals);
   }
 
+  // Lock order: client first, then owner. Every transaction that locks
+  // both follows it, so they cannot wait on each other (no deadlocks).
   async save(rental: Rental): Promise<Rental> {
-    const { client, property } = await this.getClientAndProperty(rental);
+    return this.unitOfWork.run(
+      async ({
+        clientsRepository,
+        ownersRepository,
+        propertiesRepository,
+        rentalsRepository,
+      }) => {
+        const client = await clientsRepository.findByIdForUpdate(
+          rental.getClientId(),
+        );
+        if (!client) {
+          throw new NotFoundError(
+            `Client with id ${rental.getClientId()} not found`,
+          );
+        }
 
-    rental.assertCanStartOn(businessTodayAsDate());
-    this.assertPropertyIsAvailable(property);
-    await this.assertNoConflicts(rental);
+        const property = await propertiesRepository.findById(
+          rental.getPropertyId(),
+        );
+        if (!property) {
+          throw new NotFoundError(
+            `Property with id ${rental.getPropertyId()} not found`,
+          );
+        }
 
-    const total = this.calculateCharge(rental, property);
-    this.applyCharge(rental, client, total);
+        const owner = await ownersRepository.findByIdForUpdate(
+          property.getOwnerId(),
+        );
+        if (!owner) {
+          throw new Error(`Missing owner for property ${property.getId()}`);
+        }
 
-    return this.rentalRepository.saveWithClient(rental, client);
-  }
+        rental.assertCanStartOn(this.clock.today());
+        this.assertPropertyIsAvailable(property);
+        await this.assertNoConflicts(rentalsRepository, rental);
 
-  private async getClientAndProperty(
-    rental: Rental,
-  ): Promise<{ client: Client; property: Property }> {
-    const [client, property] = await Promise.all([
-      this.clientRepository.findById(rental.getClientId()),
-      this.propertyRepository.findById(rental.getPropertyId()),
-    ]);
+        const total = this.calculateCharge(rental, property);
+        this.applyCharge(rental, client, owner, total);
 
-    if (!client) {
-      throw new NotFoundError(
-        `Client with id ${rental.getClientId()} not found`,
-      );
-    }
-
-    if (!property) {
-      throw new NotFoundError(
-        `Property with id ${rental.getPropertyId()} not found`,
-      );
-    }
-
-    return { client, property };
+        await rentalsRepository.save(rental);
+        await clientsRepository.update(client.getId(), client);
+        await ownersRepository.update(owner.getId(), owner);
+        return rental;
+      },
+    );
   }
 
   private assertPropertyIsAvailable(property: Property): void {
@@ -100,15 +108,18 @@ export class RentalService {
     }
   }
 
-  private async assertNoConflicts(rental: Rental): Promise<void> {
+  private async assertNoConflicts(
+    rentalsRepository: RentalRepository,
+    rental: Rental,
+  ): Promise<void> {
     const [existing, propertyOverlap, clientOverlap] = await Promise.all([
-      this.rentalRepository.findByKey(rental.getKey()),
-      this.rentalRepository.hasOverlappingPropertyRental(
+      rentalsRepository.findByKey(rental.getKey()),
+      rentalsRepository.hasOverlappingPropertyRental(
         rental.getPropertyId(),
         rental.getStartDate(),
         rental.getEndDate(),
       ),
-      this.rentalRepository.hasOverlappingClientRental(
+      rentalsRepository.hasOverlappingClientRental(
         rental.getClientId(),
         rental.getStartDate(),
         rental.getEndDate(),
@@ -141,40 +152,79 @@ export class RentalService {
     return Math.round(property.getPrice() * nights * 100) / 100;
   }
 
+  // The client pays the rental and the owner receives the money
   private applyCharge(
     rental: Rental,
     client: Client,
+    owner: Owner,
     total: number,
   ): void {
-    rental.refreshStatus(businessTodayAsDate());
+    rental.refreshStatus(this.clock.today());
     rental.charge(total);
     client.discount(total);
+    owner.deposit(total);
   }
 
+  // The owner returns the charged amount to the client
   async cancel(key: RentalKey): Promise<boolean> {
-    const rental = await this.rentalRepository.findByKey(key);
-    if (!rental) {
-      throw new NotFoundError('Rental not found');
-    }
+    return this.unitOfWork.run(
+      async ({
+        clientsRepository,
+        ownersRepository,
+        propertiesRepository,
+        rentalsRepository,
+      }) => {
+        const rental = await rentalsRepository.findByKey(key);
+        if (!rental) throw new NotFoundError('Rental not found');
 
-    const [details] = await this.loadDetails([rental]);
-    const { client } = details;
+        const client = await clientsRepository.findByIdForUpdate(
+          rental.getClientId(),
+        );
+        if (!client) {
+          throw new Error(`Missing client for rental`); // broken integrity -> 500
+        }
 
-    if (rental.getStatus() !== RentalStatus.UPCOMING) {
-      throw new ConflictError('The rental has already started');
-    }
+        const property = await propertiesRepository.findById(
+          rental.getPropertyId(),
+        );
+        if (!property) {
+          throw new Error(`Missing property for rental`); // broken integrity -> 500
+        }
 
-    const amount = rental.getChargedAmount();
+        const owner = await ownersRepository.findByIdForUpdate(
+          property.getOwnerId(),
+        );
+        if (!owner) {
+          throw new Error(`Missing owner for property ${property.getId()}`);
+        }
 
-    if (amount <= 0) {
-      throw new ConflictError(
-        'The rental has no charged amount to refund',
-      );
-    }
+        rental.refreshStatus(this.clock.today());
+        if (rental.getStatus() !== RentalStatus.UPCOMING) {
+          throw new ConflictError('The rental has already started');
+        }
 
-    client.deposit(amount);
+        const amount = rental.getChargedAmount();
+        if (amount <= 0) {
+          throw new ConflictError('The rental has no charged amount to refund');
+        }
 
-    return this.rentalRepository.deleteWithClient(key, client);
+        // Checked here so the message says whose balance is missing
+        if (!owner.hasEnoughBalance(amount)) {
+          throw new ConflictError(
+            'The owner balance is not enough to refund the rental',
+          );
+        }
+
+        owner.discount(amount);
+        client.deposit(amount);
+
+        // If another cancellation won: 0 rows -> NotFoundError -> rollback
+        await rentalsRepository.delete(key);
+        await clientsRepository.update(client.getId(), client);
+        await ownersRepository.update(owner.getId(), owner);
+        return true;
+      },
+    );
   }
 
   private async loadDetails(rental: Rental[]): Promise<RentalDetails[]> {
@@ -210,7 +260,7 @@ export class RentalService {
   }
 
   private async refreshStatuses(rentals: Rental[]): Promise<number> {
-    const today = businessTodayAsDate();
+    const today = this.clock.today();
     const changed: Rental[] = [];
 
     for (const rental of rentals) {

@@ -1,15 +1,11 @@
 import { Country } from '@/domain/country.js';
 import { UUID } from '@/utils/types.js';
-import { Inject, Injectable } from '@nestjs/common';
-import {
-  COUNTRY_REPOSITORY,
-  type CountryRepository,
-} from '@/application/ports/out/repositories/country-repository.js';
+import type { CountryRepository } from '@/application/ports/out/repositories/country-repository.js';
 
-@Injectable()
+// Plain class: country.module.ts builds it with useFactory, so the
+// application layer does not depend on Nest
 export class CountryService {
   constructor(
-    @Inject(COUNTRY_REPOSITORY)
     private readonly countryRepository: CountryRepository,
   ) {}
 

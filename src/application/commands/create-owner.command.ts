@@ -6,4 +6,5 @@ export interface CreateOwnerCommand {
   phone: string;
   email: string;
   bankId: UUID;
+  balance: number;
 }

@@ -23,7 +23,7 @@ import {
 import { ClientService } from '@/application/services/client-service.js';
 import { CreateClientRequest } from '../dto/request/create/create-client.request.js';
 import { UpdateClientRequest } from '../dto/request/update/update-client.request.js';
-import { ClientAmountRequest } from '../dto/request/update/client-amount.request.js';
+import { AmountRequest } from '../dto/request/update/amount.request.js';
 import {
   ClientResponse,
   ClientDetailsResponse,
@@ -101,7 +101,7 @@ export class ClientController {
   @Patch(':id/deposit')
   @ApiOperation({ summary: 'Deposit money into a client account' })
   @ApiParam({ name: 'id', description: 'Client identifier', format: 'uuid' })
-  @ApiBody({ type: ClientAmountRequest })
+  @ApiBody({ type: AmountRequest })
   @ApiOkResponse({
     description: 'Deposit applied and client returned',
     type: ClientResponse,
@@ -113,7 +113,7 @@ export class ClientController {
   @ApiNotFoundResponse({ description: 'Client not found' })
   async deposit(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() request: ClientAmountRequest,
+    @Body() request: AmountRequest,
   ): Promise<ClientResponse> {
     const client = await this.clientService.deposit(id, request.amount);
     return ClientHttpMapper.fromDomainToBasicResponse(client);
@@ -122,7 +122,7 @@ export class ClientController {
   @Patch(':id/withdraw')
   @ApiOperation({ summary: 'Withdraw money from a client account' })
   @ApiParam({ name: 'id', description: 'Client identifier', format: 'uuid' })
-  @ApiBody({ type: ClientAmountRequest })
+  @ApiBody({ type: AmountRequest })
   @ApiOkResponse({
     description: 'Withdrawal applied and client returned',
     type: ClientResponse,
@@ -132,7 +132,7 @@ export class ClientController {
   @ApiNotFoundResponse({ description: 'Client not found' })
   async withdraw(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() request: ClientAmountRequest,
+    @Body() request: AmountRequest,
   ): Promise<ClientResponse> {
     const client = await this.clientService.withdraw(id, request.amount);
     return ClientHttpMapper.fromDomainToBasicResponse(client);

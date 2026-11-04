@@ -1,9 +1,12 @@
 import { UUID } from '@/utils/types.js';
 import { DomainError } from './errors/domain-error.js';
 import { DomainErrorCode } from './errors/domain-error-codes.js';
-
-// NUMERIC(12,2) in the database: up to 9,999,999,999.99
-const MAX_BALANCE_IN_CENTS = 999_999_999_999;
+import {
+  addToBalance,
+  assertValidBalance,
+  isBalanceEnough,
+  subtractFromBalance,
+} from './money.js';
 
 export class Client {
   constructor(
@@ -21,13 +24,7 @@ export class Client {
   }
 
   private validate(): void {
-    if (
-      !Client.hasAtMostTwoDecimals(this.balance) ||
-      this.balance < 0 ||
-      Client.toCents(this.balance) > MAX_BALANCE_IN_CENTS
-    ) {
-      throw new DomainError(DomainErrorCode.INVALID_BALANCE, 'The balance is not valid');
-    }
+    assertValidBalance(this.balance);
 
     if (!this.name.trim()) {
       throw new DomainError(DomainErrorCode.NAME_REQUIRED, 'The name is required');
@@ -101,55 +98,15 @@ export class Client {
   }
 
   deposit(amount: number): void {
-    Client.validateAmount(amount);
-
-    const newBalanceInCents =
-      Client.toCents(this.balance) + Client.toCents(amount);
-    if (newBalanceInCents > MAX_BALANCE_IN_CENTS) {
-      throw new DomainError(DomainErrorCode.BALANCE_LIMIT_EXCEEDED, 'The balance exceeds the maximum allowed');
-    }
-
-    this.balance = Client.fromCents(newBalanceInCents);
+    this.balance = addToBalance(this.balance, amount);
   }
 
   discount(amount: number): void {
-    Client.validateAmount(amount);
-
-    const balanceInCents = Client.toCents(this.balance);
-    const amountInCents = Client.toCents(amount);
-
-    if (amountInCents > balanceInCents) {
-      throw new DomainError(DomainErrorCode.INSUFFICIENT_BALANCE, 'Insufficient balance');
-    }
-
-    this.balance = Client.fromCents(balanceInCents - amountInCents);
+    this.balance = subtractFromBalance(this.balance, amount);
   }
 
   hasEnoughBalance(amount: number): boolean {
-    return Client.toCents(amount) <= Client.toCents(this.balance);
-  }
-
-  // Amounts are computed in cents to avoid floating point errors
-  // (0.1 + 0.2 = 0.30000000000000004)
-  private static validateAmount(amount: number): void {
-    if (!Client.hasAtMostTwoDecimals(amount) || amount <= 0) {
-      throw new DomainError(DomainErrorCode.INVALID_AMOUNT, 'The amount must be greater than zero');
-    }
-  }
-
-  private static hasAtMostTwoDecimals(value: number): boolean {
-    return (
-      Number.isFinite(value) &&
-      Math.abs(value * 100 - Math.round(value * 100)) < 1e-6
-    );
-  }
-
-  private static toCents(value: number): number {
-    return Math.round(value * 100);
-  }
-
-  private static fromCents(cents: number): number {
-    return cents / 100;
+    return isBalanceEnough(this.balance, amount);
   }
 
   getId(): UUID {

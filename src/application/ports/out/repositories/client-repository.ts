@@ -7,6 +7,7 @@ export interface ClientRepository {
   findAll(): Promise<Client[]>;
   findByIds(ids: UUID[]): Promise<Client[]>;
   findById(id: UUID): Promise<Client | null>;
+  findByIdForUpdate(id: UUID): Promise<Client | null>;
   existsByEmail(email: string, excludeId?: UUID): Promise<boolean>;
   existsByBankAccount(
     bankId: UUID,

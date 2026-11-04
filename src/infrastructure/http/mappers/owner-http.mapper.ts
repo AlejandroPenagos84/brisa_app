@@ -28,6 +28,7 @@ export class OwnerHttpMapper {
       phone: trimText(request.phone),
       email: normalizeEmail(request.email),
       bankId: request.bankId,
+      balance: request.balance,
     };
   }
 
@@ -40,10 +41,22 @@ export class OwnerHttpMapper {
     response.phone = data.phone;
     response.email = data.email;
     response.bankId = data.bankId;
+    response.balance = data.balance;
     return response;
   }
 
+  // Used by POST /owners: includes the balance
   static fromDomainWithBankToResponse(owner: Owner, bank: Bank): OwnerResponse {
+    const response = this.fromDomainWithBankToPublicResponse(owner, bank);
+    response.balance = owner.getBalance();
+    return response;
+  }
+
+  // Used inside property responses: the owner balance is not exposed
+  static fromDomainWithBankToPublicResponse(
+    owner: Owner,
+    bank: Bank,
+  ): OwnerResponse {
     const data = owner.getData();
     return {
       id: data.id,

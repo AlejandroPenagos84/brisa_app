@@ -1,6 +1,12 @@
 import { UUID } from '@/utils/types.js';
 import { DomainError } from './errors/domain-error.js';
 import { DomainErrorCode } from './errors/domain-error-codes.js';
+import {
+  addToBalance,
+  assertValidBalance,
+  isBalanceEnough,
+  subtractFromBalance,
+} from './money.js';
 
 export class Owner {
   constructor(
@@ -9,11 +15,14 @@ export class Owner {
     private phone: string,
     private email: string,
     private bankId: UUID,
+    private balance: number = 0,
   ) {
     this.validate();
   }
 
   private validate(): void {
+    assertValidBalance(this.balance);
+
     if (!this.name.trim()) {
       throw new DomainError(DomainErrorCode.NAME_REQUIRED, 'The name is required');
     }
@@ -63,6 +72,20 @@ export class Owner {
     this.bankId = bankId;
   }
 
+  // Receives the payment of a rental, or a manual deposit
+  deposit(amount: number): void {
+    this.balance = addToBalance(this.balance, amount);
+  }
+
+  // Refunds a cancelled rental, or a manual withdrawal
+  discount(amount: number): void {
+    this.balance = subtractFromBalance(this.balance, amount);
+  }
+
+  hasEnoughBalance(amount: number): boolean {
+    return isBalanceEnough(this.balance, amount);
+  }
+
   getId(): UUID {
     return this.id;
   }
@@ -83,6 +106,10 @@ export class Owner {
     return this.bankId;
   }
 
+  getBalance(): number {
+    return this.balance;
+  }
+
   getData() {
     return {
       id: this.id,
@@ -90,6 +117,7 @@ export class Owner {
       phone: this.phone,
       email: this.email,
       bankId: this.bankId,
+      balance: this.balance,
     };
   }
 }

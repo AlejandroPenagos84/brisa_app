@@ -1,23 +1,18 @@
-import { businessToday } from '@/utils/business-date.js';
+import { businessToday } from '@/infrastructure/time/business-date.js';
 import { NotFoundError } from '@/application/errors/application-error.js';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { RentalRepository } from '@/application/ports/out/repositories/rental-repository.js';
-import { Client } from '@/domain/client.js';
 import { Rental, RentalKey } from '@/domain/rental.js';
-import { ClientEntity } from '@/infrastructure/persistence/entities/client.entity.js';
 import { RentalEntity } from '@/infrastructure/persistence/entities/rental.entity.js';
-import { ClientMapper } from '@/infrastructure/persistence/mapper/client-mapper.js';
 import { RentalMapper } from '@/infrastructure/persistence/mapper/rental-mapper.js';
 import { UUID } from '@/utils/types.js';
 
-@Injectable()
 export class RentalRepositoryTypeORM implements RentalRepository {
-  constructor(
-    @InjectRepository(RentalEntity)
-    private readonly repository: Repository<RentalEntity>,
-  ) {}
+  private readonly repository: Repository<RentalEntity>;
+
+  constructor(private readonly manager: EntityManager) {
+    this.repository = manager.getRepository(RentalEntity);
+  }
 
   async findAll(): Promise<Rental[]> {
     const entities = await this.repository.find();
@@ -90,7 +85,7 @@ export class RentalRepositoryTypeORM implements RentalRepository {
   async updateStatuses(rentals: Rental[]): Promise<void> {
     if (rentals.length === 0) return;
 
-    await this.repository.manager.transaction(async (manager) => {
+    await this.manager.transaction(async (manager) => {
       for (const rental of rentals) {
         await manager.update(
           RentalEntity,
@@ -101,20 +96,9 @@ export class RentalRepositoryTypeORM implements RentalRepository {
     });
   }
 
-  // insert() fails if the key already exists; save() would overwrite it.
-  // The rental and the charged client are persisted in the same transaction.
-  async saveWithClient(rental: Rental, client: Client): Promise<Rental> {
-    await this.repository.manager.transaction(async (manager) => {
-      await manager.insert(
-        RentalEntity,
-        RentalMapper.fromDomainToEntity(rental),
-      );
-      await manager.save(
-        ClientEntity,
-        ClientMapper.fromDomainToEntity(client),
-      );
-    });
-
+  // insert() fails if the key already exists; save() would overwrite it
+  async save(rental: Rental): Promise<Rental> {
+    await this.repository.insert(RentalMapper.fromDomainToEntity(rental));
     return rental;
   }
 
@@ -142,24 +126,15 @@ export class RentalRepositoryTypeORM implements RentalRepository {
     return RentalMapper.fromEntityToDomain(saved);
   }
 
-  // The rental is deleted and the refunded client saved in one transaction.
-  async deleteWithClient(key: RentalKey, client: Client): Promise<boolean> {
-    return this.repository.manager.transaction(async (manager) => {
-      const result = await manager.delete(
-        RentalEntity,
-        RentalMapper.fromKeyToEntityKey(key),
-      );
+  async delete(key: RentalKey): Promise<boolean> {
+    const result = await this.repository.delete(
+      RentalMapper.fromKeyToEntityKey(key),
+    );
 
-      if ((result.affected ?? 0) === 0) {
-        throw new NotFoundError('Rental not found');
-      }
+    if ((result.affected ?? 0) === 0) {
+      throw new NotFoundError('Rental not found');
+    }
 
-      await manager.save(
-        ClientEntity,
-        ClientMapper.fromDomainToEntity(client),
-      );
-
-      return true;
-    });
+    return true;
   }
 }

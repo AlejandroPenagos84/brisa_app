@@ -1,18 +1,16 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import { CityRepository } from '@/application/ports/out/repositories/city-repository.js';
 import { City } from '@/domain/city.js';
 import { CityEntity } from '@/infrastructure/persistence/entities/city.entity.js';
 import { CityMapper } from '@/infrastructure/persistence/mapper/city-mapper.js';
 import { UUID } from '@/utils/types.js';
 
-@Injectable()
 export class CityRepositoryTypeORM implements CityRepository {
-  constructor(
-    @InjectRepository(CityEntity)
-    private readonly repository: Repository<CityEntity>,
-  ) {}
+  private readonly repository: Repository<CityEntity>;
+
+  constructor(private readonly manager: EntityManager) {
+    this.repository = manager.getRepository(CityEntity);
+  }
 
   async findByIds(ids: UUID[]): Promise<City[]> {
     if (ids.length === 0) return [];

@@ -1,18 +1,16 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import { CountryRepository } from '@/application/ports/out/repositories/country-repository.js';
 import { Country } from '@/domain/country.js';
 import { CountryEntity } from '@/infrastructure/persistence/entities/country.entity.js';
 import { CountryMapper } from '@/infrastructure/persistence/mapper/country-mapper.js';
 import { UUID } from '@/utils/types.js';
 
-@Injectable()
 export class CountryRepositoryTypeORM implements CountryRepository {
-  constructor(
-    @InjectRepository(CountryEntity)
-    private readonly repository: Repository<CountryEntity>,
-  ) {}
+  private readonly repository: Repository<CountryEntity>;
+
+  constructor(private readonly manager: EntityManager) {
+    this.repository = manager.getRepository(CountryEntity);
+  }
 
   async findByIds(ids: UUID[]): Promise<Country[]> {
     if (ids.length === 0) return [];
