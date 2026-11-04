@@ -1,5 +1,6 @@
 import './env.js';
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { DatabaseModule } from './modules/database.module.js';
@@ -13,6 +14,7 @@ import { RentalModule } from './modules/rental.module.js';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     DatabaseModule,
     CountryModule,
     CityModule,

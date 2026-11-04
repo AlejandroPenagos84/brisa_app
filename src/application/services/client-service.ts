@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import {
   BadRequestException,
+  ConflictException,
   Inject,
   Injectable,
   NotFoundException,
@@ -26,6 +27,18 @@ import {
   COUNTRY_REPOSITORY,
   type CountryRepository,
 } from '../ports/out/repositories/country-repository.js';
+
+interface NormalizedClientInput {
+  email: string;
+  accountNumber: string;
+}
+
+interface ClientUpdateValues {
+  email?: string;
+  bankId: UUID;
+  accountNumber: string;
+  bankAccountChanged: boolean;
+}
 
 @Injectable()
 export class ClientService {
@@ -87,9 +100,43 @@ export class ClientService {
   }
 
   async create(command: CreateClientCommand): Promise<Client> {
-    const [city, bank] = await Promise.all([
+    const { email, accountNumber } = await this.validateCreate(command);
+
+    let client: Client;
+
+    try {
+      client = new Client(
+        randomUUID(),
+        command.name,
+        command.phone,
+        email,
+        command.cityId,
+        command.bankId,
+        accountNumber,
+        command.accountType,
+        command.balance,
+      );
+    } catch (error) {
+      if (!(error instanceof Error)) throw error;
+      throw new BadRequestException(error.message);
+    }
+
+    return this.clientRepository.save(client);
+  }
+
+  private async validateCreate(
+    command: CreateClientCommand,
+  ): Promise<NormalizedClientInput> {
+    const email = command.email.trim().toLowerCase();
+    const accountNumber = command.accountNumber.trim();
+    const [city, bank, emailExists, accountExists] = await Promise.all([
       this.cityRepository.findById(command.cityId),
       this.bankRepository.findById(command.bankId),
+      this.clientRepository.existsByEmail(email),
+      this.clientRepository.existsByBankAccount(
+        command.bankId,
+        accountNumber,
+      ),
     ]);
 
     if (!city) {
@@ -104,31 +151,32 @@ export class ClientService {
       );
     }
 
-    let client: Client;
-
-    try {
-      client = new Client(
-        randomUUID(),
-        command.name,
-        command.phone,
-        command.email,
-        command.cityId,
-        command.bankId,
-        command.accountNumber,
-        command.accountType,
-        command.balance,
-      );
-    } catch (error) {
-      if (!(error instanceof Error)) throw error;
-      throw new BadRequestException(error.message);
+    if (emailExists) {
+      throw new ConflictException('The email is already registered');
     }
 
-    return this.clientRepository.save(client);
+    if (accountExists) {
+      throw new ConflictException(
+        'The bank account is already registered',
+      );
+    }
+
+    return { email, accountNumber };
   }
 
   async update(id: UUID, command: UpdateClientCommand): Promise<Client> {
     const client = await this.getClientOrThrow(id);
 
+    await this.validateUpdateRelations(command);
+    const values = await this.validateUpdateUniqueness(id, client, command);
+    this.applyUpdateChanges(client, command, values);
+
+    return this.clientRepository.update(id, client);
+  }
+
+  private async validateUpdateRelations(
+    command: UpdateClientCommand,
+  ): Promise<void> {
     if (command.cityId !== undefined) {
       const city = await this.cityRepository.findById(command.cityId);
       if (!city) {
@@ -146,7 +194,58 @@ export class ClientService {
         );
       }
     }
+  }
 
+  private async validateUpdateUniqueness(
+    id: UUID,
+    client: Client,
+    command: UpdateClientCommand,
+  ): Promise<ClientUpdateValues> {
+    const email =
+      command.email !== undefined
+        ? command.email.trim().toLowerCase()
+        : undefined;
+    const bankId = command.bankId ?? client.getBankId();
+    const accountNumber =
+      command.accountNumber !== undefined
+        ? command.accountNumber.trim()
+        : client.getAccountNumber();
+    const bankAccountChanged =
+      command.bankId !== undefined ||
+      command.accountNumber !== undefined ||
+      command.accountType !== undefined;
+
+    const [emailExists, accountExists] = await Promise.all([
+      email !== undefined
+        ? this.clientRepository.existsByEmail(email, id)
+        : Promise.resolve(false),
+      command.bankId !== undefined || command.accountNumber !== undefined
+        ? this.clientRepository.existsByBankAccount(
+            bankId,
+            accountNumber,
+            id,
+          )
+        : Promise.resolve(false),
+    ]);
+
+    if (emailExists) {
+      throw new ConflictException('The email is already registered');
+    }
+
+    if (accountExists) {
+      throw new ConflictException(
+        'The bank account is already registered',
+      );
+    }
+
+    return { email, bankId, accountNumber, bankAccountChanged };
+  }
+
+  private applyUpdateChanges(
+    client: Client,
+    command: UpdateClientCommand,
+    values: ClientUpdateValues,
+  ): void {
     try {
       if (command.name !== undefined) {
         client.changeName(command.name);
@@ -154,22 +253,17 @@ export class ClientService {
       if (command.phone !== undefined) {
         client.changePhone(command.phone);
       }
-      if (command.email !== undefined) {
-        client.changeEmail(command.email);
+      if (values.email !== undefined) {
+        client.changeEmail(values.email);
       }
       if (command.cityId !== undefined) {
         client.changeCityId(command.cityId);
       }
 
-      const bankAccountChanged =
-        command.bankId !== undefined ||
-        command.accountNumber !== undefined ||
-        command.accountType !== undefined;
-
-      if (bankAccountChanged) {
+      if (values.bankAccountChanged) {
         client.changeBankAccount(
-          command.bankId ?? client.getBankId(),
-          command.accountNumber ?? client.getAccountNumber(),
+          values.bankId,
+          values.accountNumber,
           command.accountType ?? client.getAccountType(),
         );
       }
@@ -177,8 +271,6 @@ export class ClientService {
       if (!(error instanceof Error)) throw error;
       throw new BadRequestException(error.message);
     }
-
-    return this.clientRepository.update(id, client);
   }
 
   async deposit(id: UUID, amount: number): Promise<Client> {
@@ -208,7 +300,13 @@ export class ClientService {
   }
 
   async delete(id: UUID): Promise<boolean> {
-    return this.clientRepository.delete(id);
+    if (await this.clientRepository.hasActiveRentals(id)) {
+      throw new ConflictException(
+        `Client with id ${id} has active or upcoming rentals`,
+      );
+    }
+
+    return this.clientRepository.deleteWithFinishedRentals(id);
   }
 
   private async getClientOrThrow(id: UUID): Promise<Client> {
@@ -218,4 +316,5 @@ export class ClientService {
     }
     return client;
   }
+
 }

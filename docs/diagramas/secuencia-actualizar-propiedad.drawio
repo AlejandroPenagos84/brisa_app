@@ -1,0 +1,180 @@
+<mxfile>
+  <diagram id="seqlayout" name="Secuencia actualizar propiedad">
+    <mxGraphModel dx="800" dy="600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+<mxCell id="titulo" value="¿En qué orden se ejecuta PATCH /properties/:id? (PropertyService.update)" style="text;html=1;align=left;verticalAlign=middle;fontSize=20;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="40" y="10" width="1400" height="40" as="geometry"/></mxCell>
+<mxCell id="sub" value="Notas rojas: condición o error. Flecha continua: llamada. Discontinua gris: retorno. Azul: infraestructura · Verde: aplicación · Ámbar: dominio · Gris: externo. Las ramas de status (pasos INACTIVE / ACTIVE) son alternativas; solo se ejecuta la que corresponde." style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontColor=#555555;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="40" y="50" width="1900" height="40" as="geometry"/></mxCell>
+        <mxCell id="cli" value="Cliente HTTP" style="fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;fontStyle=1;shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=50;participant=umlActor;verticalAlign=bottom;spacingBottom=-14;labelBackgroundColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="110" y="110" width="190" height="2100" as="geometry"/>
+        </mxCell>
+        <mxCell id="pipes" value="ValidationPipe / ParseUUIDPipe" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=50;" vertex="1" parent="1">
+          <mxGeometry x="520" y="110" width="190" height="2100" as="geometry"/>
+        </mxCell>
+        <mxCell id="ctrl" value="PropertyController" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=50;" vertex="1" parent="1">
+          <mxGeometry x="930" y="110" width="190" height="2100" as="geometry"/>
+        </mxCell>
+        <mxCell id="hmap" value="PropertyHttpMapper" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=50;" vertex="1" parent="1">
+          <mxGeometry x="1340" y="110" width="190" height="2100" as="geometry"/>
+        </mxCell>
+        <mxCell id="svc" value="PropertyService" style="fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1;shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=50;" vertex="1" parent="1">
+          <mxGeometry x="1750" y="110" width="190" height="2100" as="geometry"/>
+        </mxCell>
+        <mxCell id="prop" value="Property" style="fillColor=#ffe599;strokeColor=#bf9000;fontSize=12;fontStyle=1;shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=50;" vertex="1" parent="1">
+          <mxGeometry x="2160" y="110" width="190" height="2100" as="geometry"/>
+        </mxCell>
+        <mxCell id="repo" value="PropertyRepositoryTypeORM (PropertyRepository)" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=50;" vertex="1" parent="1">
+          <mxGeometry x="2570" y="110" width="190" height="2100" as="geometry"/>
+        </mxCell>
+        <mxCell id="pmap" value="PropertyMapper" style="fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=50;" vertex="1" parent="1">
+          <mxGeometry x="2980" y="110" width="190" height="2100" as="geometry"/>
+        </mxCell>
+        <mxCell id="db" value="PostgreSQL" style="fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;fontStyle=1;shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=50;" vertex="1" parent="1">
+          <mxGeometry x="3390" y="110" width="190" height="2100" as="geometry"/>
+        </mxCell>
+        <mxCell id="act0" value="" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;fillColor=#ffffff;" vertex="1" parent="pipes">
+          <mxGeometry x="90" y="100" width="10" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="act1" value="" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;fillColor=#ffffff;" vertex="1" parent="hmap">
+          <mxGeometry x="90" y="260" width="10" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="act2" value="" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;fillColor=#ffffff;" vertex="1" parent="repo">
+          <mxGeometry x="90" y="410" width="10" height="250" as="geometry"/>
+        </mxCell>
+        <mxCell id="act3" value="" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;fillColor=#ffffff;" vertex="1" parent="repo">
+          <mxGeometry x="90" y="1050" width="10" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="act4" value="" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;fillColor=#ffffff;" vertex="1" parent="repo">
+          <mxGeometry x="90" y="1360" width="10" height="250" as="geometry"/>
+        </mxCell>
+        <mxCell id="act5" value="" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;fillColor=#ffffff;" vertex="1" parent="repo">
+          <mxGeometry x="90" y="1660" width="10" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="act6" value="" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;fillColor=#ffffff;" vertex="1" parent="svc">
+          <mxGeometry x="90" y="360" width="10" height="1500" as="geometry"/>
+        </mxCell>
+        <mxCell id="act7" value="" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;fillColor=#ffffff;" vertex="1" parent="hmap">
+          <mxGeometry x="90" y="1910" width="10" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="act8" value="" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;fillColor=#ffffff;" vertex="1" parent="ctrl">
+          <mxGeometry x="90" y="210" width="10" height="1800" as="geometry"/>
+        </mxCell>
+        <mxCell id="m0" value="PATCH /properties/:id" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=block;curved=0;rounded=0;exitX=0.5;exitY=0.0476;entryX=0;entryY=0.0;" edge="1" parent="1" source="cli" target="act0">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="note1" value="id no UUID o cuerpo inválido: 400" style="shape=note;whiteSpace=wrap;html=1;size=14;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="635" y="240" width="261" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="m2" value="update(id, UpdatePropertyRequest)" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=block;curved=0;rounded=0;exitX=1;exitY=1.0;entryX=0;entryY=0.0;" edge="1" parent="1" source="act0" target="act8">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="m3" value="fromUpdateRequestToCommand(request)" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=block;curved=0;rounded=0;exitX=1;exitY=0.0278;entryX=0;entryY=0.0;" edge="1" parent="1" source="act8" target="act1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="m4" value="UpdatePropertyCommand" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=open;dashed=1;curved=0;rounded=0;strokeColor=#999999;fontColor=#999999;exitX=0;exitY=1.0;entryX=1;entryY=0.0556;" edge="1" parent="1" source="act1" target="act8">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="m5" value="update(id, command)" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=block;curved=0;rounded=0;exitX=1;exitY=0.0833;entryX=0;entryY=0.0;" edge="1" parent="1" source="act8" target="act6">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="m6" value="findById(id)" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=block;curved=0;rounded=0;exitX=1;exitY=0.0333;entryX=0;entryY=0.0;" edge="1" parent="1" source="act6" target="act2">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="m7" value="findOneBy({ id })" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=block;curved=0;rounded=0;exitX=1;exitY=0.2;entryX=0.5;entryY=0.219;" edge="1" parent="1" source="act2" target="db">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="m8" value="PropertyEntity | null" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=open;dashed=1;curved=0;rounded=0;strokeColor=#999999;fontColor=#999999;exitX=0.5;exitY=0.2429;entryX=1;entryY=0.4;" edge="1" parent="1" source="db" target="act2">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="m9" value="fromEntityToDomain(entity)" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=block;curved=0;rounded=0;exitX=1;exitY=0.6;entryX=0.5;entryY=0.2667;" edge="1" parent="1" source="act2" target="pmap">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="m10" value="Property" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=open;dashed=1;curved=0;rounded=0;strokeColor=#999999;fontColor=#999999;exitX=0.5;exitY=0.2905;entryX=1;entryY=0.8;" edge="1" parent="1" source="pmap" target="act2">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="m11" value="Property | null" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=open;dashed=1;curved=0;rounded=0;strokeColor=#999999;fontColor=#999999;exitX=0;exitY=1.0;entryX=1;entryY=0.2;" edge="1" parent="1" source="act2" target="act6">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="note12" value="null: NotFoundException (404)" style="shape=note;whiteSpace=wrap;html=1;size=14;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1865" y="800" width="233" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="m13" value="change*() de cada campo presente" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=block;curved=0;rounded=0;exitX=1;exitY=0.2733;entryX=0.5;entryY=0.3667;" edge="1" parent="1" source="act6" target="prop">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="note14" value="Error de dominio: BadRequestException (400)" style="shape=note;whiteSpace=wrap;html=1;size=14;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1865" y="910" width="331" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="note15" value="status = INACTIVE: deactivate()" style="shape=note;whiteSpace=wrap;html=1;size=14;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1865" y="970" width="247" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="m16" value="isManuallyInactive() / deactivate()" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=block;curved=0;rounded=0;exitX=1;exitY=0.3867;entryX=0.5;entryY=0.4476;" edge="1" parent="1" source="act6" target="prop">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="note17" value="status = ACTIVE e inactiva manual:" style="shape=note;whiteSpace=wrap;html=1;size=14;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1865" y="1080" width="268" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="m18" value="findOccupiedPropertyIds([id])" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=block;curved=0;rounded=0;exitX=1;exitY=0.46;entryX=0;entryY=0.0;" edge="1" parent="1" source="act6" target="act3">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="m19" value="QueryBuilder join rentals (checkOutDate &gt;= hoy)" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=block;curved=0;rounded=0;exitX=1;exitY=0.3333;entryX=0.5;entryY=0.5238;" edge="1" parent="1" source="act3" target="db">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="m20" value="ids" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=open;dashed=1;curved=0;rounded=0;strokeColor=#999999;fontColor=#999999;exitX=0.5;exitY=0.5476;entryX=1;entryY=0.6667;" edge="1" parent="1" source="db" target="act3">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="m21" value="UUID[]" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=open;dashed=1;curved=0;rounded=0;strokeColor=#999999;fontColor=#999999;exitX=0;exitY=1.0;entryX=1;entryY=0.56;" edge="1" parent="1" source="act3" target="act6">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="note22" value="con ids: ConflictException (409)" style="shape=note;whiteSpace=wrap;html=1;size=14;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1865" y="1340" width="254" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="m23" value="activate()" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=block;curved=0;rounded=0;exitX=1;exitY=0.6333;entryX=0.5;entryY=0.6238;" edge="1" parent="1" source="act6" target="prop">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="m24" value="update(id, property)" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=block;curved=0;rounded=0;exitX=1;exitY=0.6667;entryX=0;entryY=0.0;" edge="1" parent="1" source="act6" target="act4">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="m25" value="existsBy({ id })" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=block;curved=0;rounded=0;exitX=1;exitY=0.2;entryX=0.5;entryY=0.6714;" edge="1" parent="1" source="act4" target="db">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="m26" value="fromDomainToEntity(property)" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=block;curved=0;rounded=0;exitX=1;exitY=0.4;entryX=0.5;entryY=0.6952;" edge="1" parent="1" source="act4" target="pmap">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="m27" value="save(entity)" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=block;curved=0;rounded=0;exitX=1;exitY=0.6;entryX=0.5;entryY=0.719;" edge="1" parent="1" source="act4" target="db">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="m28" value="fromEntityToDomain(saved)" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=block;curved=0;rounded=0;exitX=1;exitY=0.8;entryX=0.5;entryY=0.7429;" edge="1" parent="1" source="act4" target="pmap">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="m29" value="Property" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=open;dashed=1;curved=0;rounded=0;strokeColor=#999999;fontColor=#999999;exitX=0;exitY=1.0;entryX=1;entryY=0.8333;" edge="1" parent="1" source="act4" target="act6">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="m30" value="findOccupiedPropertyIds([id])" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=block;curved=0;rounded=0;exitX=1;exitY=0.8667;entryX=0;entryY=0.0;" edge="1" parent="1" source="act6" target="act5">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="m31" value="QueryBuilder join rentals" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=block;curved=0;rounded=0;exitX=1;exitY=0.5;entryX=0.5;entryY=0.8143;" edge="1" parent="1" source="act5" target="db">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="m32" value="UUID[]" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=open;dashed=1;curved=0;rounded=0;strokeColor=#999999;fontColor=#999999;exitX=0;exitY=1.0;entryX=1;entryY=0.9333;" edge="1" parent="1" source="act5" target="act6">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="m33" value="applyOccupancy(ocupada)" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=block;curved=0;rounded=0;exitX=1;exitY=0.9667;entryX=0.5;entryY=0.8619;" edge="1" parent="1" source="act6" target="prop">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="m34" value="Property" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=open;dashed=1;curved=0;rounded=0;strokeColor=#999999;fontColor=#999999;exitX=0;exitY=1.0;entryX=1;entryY=0.9167;" edge="1" parent="1" source="act6" target="act8">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="m35" value="fromDomainToResponse(updated)" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=block;curved=0;rounded=0;exitX=1;exitY=0.9444;entryX=0;entryY=0.0;" edge="1" parent="1" source="act8" target="act7">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="m36" value="PropertyResponse" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=open;dashed=1;curved=0;rounded=0;strokeColor=#999999;fontColor=#999999;exitX=0;exitY=1.0;entryX=1;entryY=0.9722;" edge="1" parent="1" source="act7" target="act8">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="m37" value="200 OK PropertyResponse" style="html=1;verticalAlign=bottom;fontSize=11;endArrow=open;dashed=1;curved=0;rounded=0;strokeColor=#999999;fontColor=#999999;exitX=0;exitY=1.0;entryX=0.5;entryY=0.9571;" edge="1" parent="1" source="act8" target="cli">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

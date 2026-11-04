@@ -160,7 +160,10 @@ export class RentalController {
     description: 'Invalid rental dates, data or insufficient balance',
   })
   @ApiNotFoundResponse({ description: 'Client or property not found' })
-  @ApiConflictResponse({ description: 'The rental already exists' })
+  @ApiConflictResponse({
+    description:
+      'The rental already exists, the property is inactive, or the dates overlap',
+  })
   async create(@Body() request: CreateRentalRequest): Promise<RentalResponse> {
     const rental = RentalHttpMapper.fromCreateRequestToDomain(request);
     const saved = await this.rentalService.save(rental);

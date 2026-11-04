@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, LessThan, Repository } from 'typeorm';
 import { ClientRepository } from '@/application/ports/out/repositories/client-repository.js';
 import { Client } from '@/domain/client.js';
 import { ClientEntity } from '@/infrastructure/persistence/entities/client.entity.js';
+import { RentalEntity } from '@/infrastructure/persistence/entities/rental.entity.js';
 import { ClientMapper } from '@/infrastructure/persistence/mapper/client-mapper.js';
 import { UUID } from '@/utils/types.js';
 
@@ -31,6 +32,49 @@ export class ClientRepositoryTypeORM implements ClientRepository {
     return entity ? ClientMapper.fromEntityToDomain(entity) : null;
   }
 
+  async existsByEmail(email: string, excludeId?: UUID): Promise<boolean> {
+    const query = this.repository
+      .createQueryBuilder('client')
+      .where('LOWER(client.email) = LOWER(:email)', { email });
+
+    if (excludeId !== undefined) {
+      query.andWhere('client.id != :excludeId', { excludeId });
+    }
+
+    const count = await query.getCount();
+    return count > 0;
+  }
+
+  async existsByBankAccount(
+    bankId: UUID,
+    accountNumber: string,
+    excludeId?: UUID,
+  ): Promise<boolean> {
+    const query = this.repository
+      .createQueryBuilder('client')
+      .where('client.bankId = :bankId', { bankId })
+      .andWhere('client.accountNumber = :accountNumber', { accountNumber });
+
+    if (excludeId !== undefined) {
+      query.andWhere('client.id != :excludeId', { excludeId });
+    }
+
+    const count = await query.getCount();
+    return count > 0;
+  }
+
+  async hasActiveRentals(clientId: UUID): Promise<boolean> {
+    const today = new Date().toISOString().slice(0, 10);
+    const count = await this.repository
+      .createQueryBuilder('client')
+      .innerJoin('client.rentals', 'rental')
+      .where('client.id = :clientId', { clientId })
+      .andWhere('rental.checkOutDate >= :today', { today })
+      .getCount();
+
+    return count > 0;
+  }
+
   // insert() fails if the id already exists; save() would overwrite it
   async save(client: Client): Promise<Client> {
     await this.repository.insert(ClientMapper.fromDomainToEntity(client));
@@ -53,8 +97,17 @@ export class ClientRepositoryTypeORM implements ClientRepository {
     return ClientMapper.fromEntityToDomain(saved);
   }
 
-  async delete(id: UUID): Promise<boolean> {
-    const result = await this.repository.delete({ id });
-    return (result.affected ?? 0) > 0;
+  async deleteWithFinishedRentals(clientId: UUID): Promise<boolean> {
+    const today = new Date().toISOString().slice(0, 10);
+
+    return this.repository.manager.transaction(async (manager) => {
+      await manager.delete(RentalEntity, {
+        clientId,
+        checkOutDate: LessThan(today),
+      });
+
+      const result = await manager.delete(ClientEntity, { id: clientId });
+      return (result.affected ?? 0) > 0;
+    });
   }
 }

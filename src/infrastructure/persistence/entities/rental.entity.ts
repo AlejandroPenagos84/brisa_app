@@ -10,9 +10,14 @@ import {
 import { ClientEntity } from '@/infrastructure/persistence/entities/client.entity.js';
 import { decimalTransformer } from '@/infrastructure/persistence/entities/decimal.transformer.js';
 import { PropertyEntity } from '@/infrastructure/persistence/entities/property.entity.js';
+import { RentalStatus } from '@/domain/rental.js';
 
 @Entity({ name: 'rentals' })
 @Check('CHK_rentals_dates', 'check_out_date > check_in_date')
+@Check(
+  'CHK_rentals_status',
+  "status IN ('UPCOMING','ACTIVE','FINISHED')",
+)
 export class RentalEntity {
   // Composite primary key: (property_id, client_id, check_in_date)
   @PrimaryColumn({ name: 'property_id', type: 'varchar', length: 36 })
@@ -38,6 +43,14 @@ export class RentalEntity {
     transformer: decimalTransformer,
   })
   chargedAmount: number;
+
+  @Column({
+    name: 'status',
+    type: 'varchar',
+    length: 20,
+    default: RentalStatus.UPCOMING,
+  })
+  status: RentalStatus;
 
   @ManyToOne(() => PropertyEntity, (property) => property.rentals, {
     nullable: false,

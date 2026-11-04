@@ -5,6 +5,7 @@ import {
   In,
   FindOperator,
   FindOptionsWhere,
+  LessThan,
   LessThanOrEqual,
   MoreThanOrEqual,
   Repository,
@@ -15,6 +16,7 @@ import {
 } from '@/application/ports/out/repositories/property-repository.js';
 import { Property } from '@/domain/property.js';
 import { PropertyEntity } from '@/infrastructure/persistence/entities/property.entity.js';
+import { RentalEntity } from '@/infrastructure/persistence/entities/rental.entity.js';
 import { PropertyMapper } from '@/infrastructure/persistence/mapper/property-mapper.js';
 import { UUID } from '@/utils/types.js';
 
@@ -72,6 +74,34 @@ export class PropertyRepositoryTypeORM implements PropertyRepository {
     return entities.map((entity) => PropertyMapper.fromEntityToDomain(entity));
   }
 
+  async findOccupiedPropertyIds(propertyIds: UUID[]): Promise<UUID[]> {
+    if (propertyIds.length === 0) return [];
+
+    const today = new Date().toISOString().slice(0, 10);
+    const rows = await this.repository
+      .createQueryBuilder('property')
+      .innerJoin('property.rentals', 'rental')
+      .select('property.id', 'id')
+      .where('property.id IN (:...propertyIds)', { propertyIds })
+      .andWhere('rental.checkOutDate >= :today', { today })
+      .distinct(true)
+      .getRawMany<{ id: string }>();
+
+    return rows.map((row) => row.id);
+  }
+
+  async hasActiveRentals(propertyId: UUID): Promise<boolean> {
+    const today = new Date().toISOString().slice(0, 10);
+    const count = await this.repository
+      .createQueryBuilder('property')
+      .innerJoin('property.rentals', 'rental')
+      .where('property.id = :propertyId', { propertyId })
+      .andWhere('rental.checkOutDate >= :today', { today })
+      .getCount();
+
+    return count > 0;
+  }
+
   async save(property: Property): Promise<Property> {
     await this.repository.insert(PropertyMapper.fromDomainToEntity(property));
     return property;
@@ -93,8 +123,17 @@ export class PropertyRepositoryTypeORM implements PropertyRepository {
     return PropertyMapper.fromEntityToDomain(saved);
   }
 
-  async delete(id: UUID): Promise<boolean> {
-    const result = await this.repository.delete({ id });
-    return (result.affected ?? 0) > 0;
+  async deleteWithPastRentals(propertyId: UUID): Promise<boolean> {
+    const today = new Date().toISOString().slice(0, 10);
+
+    return this.repository.manager.transaction(async (manager) => {
+      await manager.delete(RentalEntity, {
+        propertyId,
+        checkOutDate: LessThan(today),
+      });
+
+      const result = await manager.delete(PropertyEntity, { id: propertyId });
+      return (result.affected ?? 0) > 0;
+    });
   }
 }

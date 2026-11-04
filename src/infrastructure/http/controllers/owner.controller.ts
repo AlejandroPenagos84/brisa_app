@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiConflictResponse,
   ApiCreatedResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -60,6 +61,7 @@ export class OwnerController {
   })
   @ApiBadRequestResponse({ description: 'Invalid owner data' })
   @ApiNotFoundResponse({ description: 'Bank not found' })
+  @ApiConflictResponse({ description: 'Email already registered' })
   async create(@Body() request: CreateOwnerRequest): Promise<OwnerResponse> {
     const command = OwnerHttpMapper.fromCreateRequestToCommand(request);
     const { owner, bank } = await this.ownerService.create(command);
@@ -72,6 +74,7 @@ export class OwnerController {
   @ApiOkResponse({ description: 'Owner updated', type: OwnerResponse })
   @ApiBadRequestResponse({ description: 'Invalid owner data' })
   @ApiNotFoundResponse({ description: 'Owner or bank not found' })
+  @ApiConflictResponse({ description: 'Email already registered' })
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() request: UpdateOwnerRequest,
@@ -86,6 +89,7 @@ export class OwnerController {
   @ApiParam({ name: 'id', description: 'Owner identifier', format: 'uuid' })
   @ApiOkResponse({ description: 'Owner deleted' })
   @ApiNotFoundResponse({ description: 'Owner not found' })
+  @ApiConflictResponse({ description: 'Owner has properties' })
   async delete(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     const deleted = await this.ownerService.delete(id);
     if (!deleted) {

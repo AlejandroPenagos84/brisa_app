@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiConflictResponse,
   ApiCreatedResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -109,6 +110,7 @@ export class PropertyController {
     type: PropertyResponse,
   })
   @ApiBadRequestResponse({ description: 'Invalid property data' })
+  @ApiNotFoundResponse({ description: 'Owner or city not found' })
   async create(
     @Body() request: CreatePropertyRequest,
   ): Promise<PropertyResponse> {
@@ -127,6 +129,9 @@ export class PropertyController {
   @ApiOkResponse({ description: 'Property updated', type: PropertyResponse })
   @ApiBadRequestResponse({ description: 'Invalid property data' })
   @ApiNotFoundResponse({ description: 'Property not found' })
+  @ApiConflictResponse({
+    description: 'Property has active or upcoming rentals and cannot be activated',
+  })
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() request: UpdatePropertyRequest,
@@ -143,7 +148,11 @@ export class PropertyController {
     description: 'Property identifier',
     format: 'uuid',
   })
-  @ApiOkResponse({ description: 'Delete request processed' })
+  @ApiOkResponse({ description: 'Property deleted with its past rentals' })
+  @ApiNotFoundResponse({ description: 'Property not found' })
+  @ApiConflictResponse({
+    description: 'Property has active or upcoming rentals',
+  })
   async delete(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     await this.propertyService.delete(id);
   }

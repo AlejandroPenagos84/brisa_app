@@ -35,6 +35,7 @@ export class PropertyHttpMapper {
       numberOfRooms: request.numberOfRooms,
       capacity: request.capacity,
       price: request.price,
+      status: request.status,
     };
   }
 

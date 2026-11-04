@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import {
   BadRequestException,
+  ConflictException,
   Inject,
   Injectable,
   NotFoundException,
@@ -46,6 +47,30 @@ export class OwnerService {
       throw new NotFoundException(`Owner with id ${id} not found`);
     }
 
+    if (command.bankId !== undefined) {
+      const bank = await this.bankRepository.findById(command.bankId);
+      if (!bank) {
+        throw new NotFoundException(
+          `Bank with id ${command.bankId} not found`,
+        );
+      }
+    }
+
+    const email =
+      command.email !== undefined
+        ? command.email.trim().toLowerCase()
+        : undefined;
+
+    if (email !== undefined) {
+      const emailExists = await this.ownerRepository.existsByEmail(
+        email,
+        id,
+      );
+      if (emailExists) {
+        throw new ConflictException('The email is already registered');
+      }
+    }
+
     try {
       if (command.name !== undefined) {
         owner.changeName(command.name.trim());
@@ -53,8 +78,8 @@ export class OwnerService {
       if (command.phone !== undefined) {
         owner.changePhone(command.phone.trim());
       }
-      if (command.email !== undefined) {
-        owner.changeEmail(command.email.trim().toLowerCase());
+      if (email !== undefined) {
+        owner.changeEmail(email);
       }
       if (command.bankId !== undefined) {
         owner.changeBank(command.bankId);
@@ -75,6 +100,11 @@ export class OwnerService {
       throw new NotFoundException(`Bank with id ${command.bankId} not found`);
     }
 
+    const email = command.email.trim().toLowerCase();
+    if (await this.ownerRepository.existsByEmail(email)) {
+      throw new ConflictException('The email is already registered');
+    }
+
     let owner: Owner;
 
     try {
@@ -82,7 +112,7 @@ export class OwnerService {
         randomUUID(),
         command.name,
         command.phone,
-        command.email,
+        email,
         command.bankId,
       );
     } catch (error) {
@@ -95,6 +125,12 @@ export class OwnerService {
   }
 
   async delete(id: UUID): Promise<boolean> {
+    if (await this.ownerRepository.hasProperties(id)) {
+      throw new ConflictException(
+        `Owner with id ${id} has properties and cannot be deleted`,
+      );
+    }
+
     return this.ownerRepository.delete(id);
   }
 }

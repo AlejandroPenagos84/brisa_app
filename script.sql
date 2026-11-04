@@ -45,6 +45,8 @@ CREATE TABLE owners (
     FOREIGN KEY (bank_id) REFERENCES banks(id)
 );
 
+CREATE UNIQUE INDEX UQ_owners_email_lower ON owners (LOWER(email));
+
 -- =========================================
 -- 5. CLIENTS
 -- =========================================
@@ -67,8 +69,11 @@ CREATE TABLE clients (
     FOREIGN KEY (city_id) REFERENCES cities(id),
     FOREIGN KEY (bank_id) REFERENCES banks(id),
 
-    CONSTRAINT CHK_clients_balance CHECK (balance >= 0)
+    CONSTRAINT CHK_clients_balance CHECK (balance >= 0),
+    CONSTRAINT UQ_clients_bank_account UNIQUE (bank_id, account_number)
 );
+
+CREATE UNIQUE INDEX UQ_clients_email_lower ON clients (LOWER(email));
 
 -- =========================================
 -- 6. PROPERTIES
@@ -88,6 +93,8 @@ CREATE TABLE properties (
     -- City where the property is located
     city_id VARCHAR(36) NOT NULL,
 
+    manually_inactive BOOLEAN NOT NULL DEFAULT FALSE,
+
     FOREIGN KEY (owner_id) REFERENCES owners(id),
     FOREIGN KEY (city_id) REFERENCES cities(id)
 );
@@ -96,19 +103,35 @@ CREATE TABLE properties (
 -- 7. RENTALS
 -- =========================================
 
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
 CREATE TABLE rentals (
     property_id VARCHAR(36) NOT NULL,
     client_id VARCHAR(36) NOT NULL,
     check_in_date DATE NOT NULL,
     check_out_date DATE NOT NULL,
     charged_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
+    status VARCHAR(20) NOT NULL DEFAULT 'UPCOMING',
 
     PRIMARY KEY (property_id, client_id, check_in_date),
 
     FOREIGN KEY (property_id) REFERENCES properties(id),
     FOREIGN KEY (client_id) REFERENCES clients(id),
 
-    CONSTRAINT CHK_rentals_dates CHECK (check_out_date > check_in_date)
+    CONSTRAINT CHK_rentals_dates CHECK (check_out_date > check_in_date),
+    CONSTRAINT CHK_rentals_status CHECK (status IN ('UPCOMING', 'ACTIVE', 'FINISHED')),
+
+    CONSTRAINT EXCL_rentals_property_period
+        EXCLUDE USING gist (
+            property_id WITH =,
+            daterange(check_in_date, check_out_date, '[]') WITH &&
+        ),
+
+    CONSTRAINT EXCL_rentals_client_period
+        EXCLUDE USING gist (
+            client_id WITH =,
+            daterange(check_in_date, check_out_date, '[]') WITH &&
+        )
 );
 
 -- =========================================
@@ -194,3 +217,9 @@ INSERT INTO rentals (property_id, client_id, check_in_date, check_out_date, char
     ('e0000000-0000-4000-8000-000000000005', 'd0000000-0000-4000-8000-000000000001', '2026-12-05', '2026-12-09', 640.00),
     ('e0000000-0000-4000-8000-000000000002', 'd0000000-0000-4000-8000-000000000001', '2027-01-05', '2027-01-12', 2450.00)
 ON CONFLICT (property_id, client_id, check_in_date) DO NOTHING;
+
+UPDATE rentals SET status = CASE
+    WHEN CURRENT_DATE < check_in_date THEN 'UPCOMING'
+    WHEN CURRENT_DATE >= check_out_date THEN 'FINISHED'
+    ELSE 'ACTIVE'
+END;

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import {
   BadRequestException,
+  ConflictException,
   Inject,
   Injectable,
   NotFoundException,
@@ -11,7 +12,7 @@ import {
   PropertyFilters,
   type PropertyRepository,
 } from '@/application/ports/out/repositories/property-repository.js';
-import { Property } from '@/domain/property.js';
+import { Property, PropertyStatus } from '@/domain/property.js';
 import { UUID } from '@/utils/types.js';
 import { UpdatePropertyCommand } from '../commands/update-property.command.js';
 import type { PropertyDetails } from '../models/property-details.js';
@@ -63,9 +64,12 @@ export class PropertyService {
       ...new Set(properties.map((property) => property.getCityId())),
     ];
 
-    const [owners, cities] = await Promise.all([
+    const [owners, cities, occupiedIds] = await Promise.all([
       this.ownerRepository.findByIds(ownerIds),
       this.cityRepository.findByIds(cityIds),
+      this.propertyRepository.findOccupiedPropertyIds(
+        properties.map((property) => property.getId()),
+      ),
     ]);
 
     const bankIds = [...new Set(owners.map((owner) => owner.getBankId()))];
@@ -74,8 +78,11 @@ export class PropertyService {
     const ownersById = new Map(owners.map((owner) => [owner.getId(), owner]));
     const citiesById = new Map(cities.map((city) => [city.getId(), city]));
     const banksById = new Map(banks.map((bank) => [bank.getId(), bank]));
+    const occupiedPropertyIds = new Set(occupiedIds);
 
     return properties.map((property) => {
+      property.applyOccupancy(occupiedPropertyIds.has(property.getId()));
+
       const owner = ownersById.get(property.getOwnerId());
       const city = citiesById.get(property.getCityId());
       if (!owner || !city) {
@@ -110,6 +117,21 @@ export class PropertyService {
   }
 
   async create(command: CreatePropertyCommand): Promise<Property> {
+    const [owner, city] = await Promise.all([
+      this.ownerRepository.findById(command.ownerId),
+      this.cityRepository.findById(command.cityId),
+    ]);
+
+    if (!owner) {
+      throw new NotFoundException(
+        `Owner with id ${command.ownerId} not found`,
+      );
+    }
+
+    if (!city) {
+      throw new NotFoundException(`City with id ${command.cityId} not found`);
+    }
+
     let property: Property;
 
     try {
@@ -131,37 +153,101 @@ export class PropertyService {
     return this.propertyRepository.save(property);
   }
 
-  async update(id: UUID, property: UpdatePropertyCommand): Promise<Property> {
-    const existingProperty = await this.propertyRepository.findById(id);
-    if (!existingProperty) {
+  async update(id: UUID, command: UpdatePropertyCommand): Promise<Property> {
+    const property = await this.propertyRepository.findById(id);
+    if (!property) {
       throw new NotFoundException(`Property with id ${id} not found`);
     }
 
+    this.applyFieldChanges(property, command);
+    await this.applyStatusChange(id, property, command.status);
+
+    const updated = await this.propertyRepository.update(id, property);
+    await this.applyOccupancy([updated]);
+    return updated;
+  }
+
+  private applyFieldChanges(
+    property: Property,
+    command: UpdatePropertyCommand,
+  ): void {
     try {
-      if (property.address !== undefined) {
-        existingProperty.changeAddress(property.address);
+      if (command.address !== undefined) {
+        property.changeAddress(command.address);
       }
-      if (property.area !== undefined) {
-        existingProperty.changeArea(property.area);
+      if (command.area !== undefined) {
+        property.changeArea(command.area);
       }
-      if (property.numberOfRooms !== undefined) {
-        existingProperty.changeNumberOfRooms(property.numberOfRooms);
+      if (command.numberOfRooms !== undefined) {
+        property.changeNumberOfRooms(command.numberOfRooms);
       }
-      if (property.capacity !== undefined) {
-        existingProperty.changeCapacity(property.capacity);
+      if (command.capacity !== undefined) {
+        property.changeCapacity(command.capacity);
       }
-      if (property.price !== undefined) {
-        existingProperty.changePrice(property.price);
+      if (command.price !== undefined) {
+        property.changePrice(command.price);
       }
     } catch (error) {
       if (!(error instanceof Error)) throw error;
       throw new BadRequestException(error.message);
     }
+  }
 
-    return this.propertyRepository.update(id, existingProperty);
+  private async applyStatusChange(
+    id: UUID,
+    property: Property,
+    status?: PropertyStatus,
+  ): Promise<void> {
+    if (status === undefined) return;
+
+    if (status === PropertyStatus.INACTIVE) {
+      if (!property.isManuallyInactive()) {
+        property.deactivate();
+      }
+      return;
+    }
+
+    if (!property.isManuallyInactive()) return;
+
+    const occupiedIds =
+      await this.propertyRepository.findOccupiedPropertyIds([id]);
+
+    if (occupiedIds.length > 0) {
+      throw new ConflictException(
+        `Property with id ${id} has active or upcoming rentals`,
+      );
+    }
+
+    property.activate();
   }
 
   async delete(id: UUID): Promise<boolean> {
-    return this.propertyRepository.delete(id);
+    if (await this.propertyRepository.hasActiveRentals(id)) {
+      throw new ConflictException(
+        `Property with id ${id} has active or upcoming rentals`,
+      );
+    }
+
+    const deleted =
+      await this.propertyRepository.deleteWithPastRentals(id);
+
+    if (!deleted) {
+      throw new NotFoundException(`Property with id ${id} not found`);
+    }
+
+    return true;
+  }
+
+  private async applyOccupancy(properties: Property[]): Promise<void> {
+    if (properties.length === 0) return;
+
+    const occupiedIds = await this.propertyRepository.findOccupiedPropertyIds(
+      properties.map((property) => property.getId()),
+    );
+    const occupiedPropertyIds = new Set(occupiedIds);
+
+    for (const property of properties) {
+      property.applyOccupancy(occupiedPropertyIds.has(property.getId()));
+    }
   }
 }

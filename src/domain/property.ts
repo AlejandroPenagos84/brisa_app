@@ -1,12 +1,13 @@
 import { UUID } from '@/utils/types.js';
 
-enum PropertyStatus {
+export enum PropertyStatus {
   ACTIVE = 'ACTIVE',
   INACTIVE = 'INACTIVE',
 }
 
 export class Property {
-  private status: PropertyStatus = PropertyStatus.ACTIVE;
+  private manuallyInactive: boolean;
+  private occupied = false;
 
   constructor(
     private readonly id: UUID,
@@ -17,7 +18,9 @@ export class Property {
     private numberOfRooms: number,
     private capacity: number,
     private price: number,
+    manuallyInactive: boolean = false,
   ) {
+    this.manuallyInactive = manuallyInactive;
     this.validate();
   }
 
@@ -40,6 +43,10 @@ export class Property {
 
     if (this.price <= 0) {
       throw new Error('The price must be greater than zero');
+    }
+
+    if (typeof this.manuallyInactive !== 'boolean') {
+      throw new Error('The property availability is not valid');
     }
   }
 
@@ -82,24 +89,36 @@ export class Property {
     this.capacity = capacity;
   }
 
+  applyOccupancy(occupied: boolean): void {
+    this.occupied = occupied;
+  }
+
   deactivate(): void {
-    if (this.status === PropertyStatus.INACTIVE) {
+    if (this.manuallyInactive) {
       throw new Error('The property is already inactive');
     }
 
-    this.status = PropertyStatus.INACTIVE;
+    this.manuallyInactive = true;
   }
 
   activate(): void {
-    if (this.status === PropertyStatus.ACTIVE) {
+    if (!this.manuallyInactive) {
       throw new Error('The property is already active');
     }
 
-    this.status = PropertyStatus.ACTIVE;
+    this.manuallyInactive = false;
+  }
+
+  isManuallyInactive(): boolean {
+    return this.manuallyInactive;
+  }
+
+  isAvailableForBooking(): boolean {
+    return !this.manuallyInactive;
   }
 
   isActive(): boolean {
-    return this.status === PropertyStatus.ACTIVE;
+    return this.getStatus() === PropertyStatus.ACTIVE;
   }
 
   getId(): UUID {
@@ -135,7 +154,11 @@ export class Property {
   }
 
   getStatus(): PropertyStatus {
-    return this.status;
+    if (this.manuallyInactive || this.occupied) {
+      return PropertyStatus.INACTIVE;
+    }
+
+    return PropertyStatus.ACTIVE;
   }
 
   getData() {
@@ -148,7 +171,7 @@ export class Property {
       numberOfRooms: this.numberOfRooms,
       capacity: this.capacity,
       price: this.price,
-      status: this.status,
+      status: this.getStatus(),
     };
   }
 }

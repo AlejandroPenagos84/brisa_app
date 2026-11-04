@@ -9,6 +9,7 @@ export class RentalMapper {
       RentalMapper.fromDateColumn(entity.checkInDate),
       RentalMapper.fromDateColumn(entity.checkOutDate),
       entity.chargedAmount,
+      entity.status,
     );
   }
 
@@ -20,6 +21,7 @@ export class RentalMapper {
     entity.checkInDate = RentalMapper.toDateColumn(data.startDate);
     entity.checkOutDate = RentalMapper.toDateColumn(data.endDate);
     entity.chargedAmount = rental.getChargedAmount();
+    entity.status = rental.getStatus();
     return entity;
   }
 
@@ -36,7 +38,7 @@ export class RentalMapper {
 
   // DATE columns have no time or time zone, so both directions use UTC
   // to avoid shifting the day: '2026-10-31' <-> 2026-10-31T00:00:00.000Z
-  private static toDateColumn(date: Date): string {
+  static toDateColumn(date: Date): string {
     return date.toISOString().slice(0, 10);
   }
 

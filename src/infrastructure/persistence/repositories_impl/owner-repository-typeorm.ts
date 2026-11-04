@@ -31,6 +31,29 @@ export class OwnerRepositoryTypeORM implements OwnerRepository {
     return entity ? OwnerMapper.fromEntityToDomain(entity) : null;
   }
 
+  async existsByEmail(email: string, excludeId?: UUID): Promise<boolean> {
+    const query = this.repository
+      .createQueryBuilder('owner')
+      .where('LOWER(owner.email) = LOWER(:email)', { email });
+
+    if (excludeId !== undefined) {
+      query.andWhere('owner.id != :excludeId', { excludeId });
+    }
+
+    const count = await query.getCount();
+    return count > 0;
+  }
+
+  async hasProperties(ownerId: UUID): Promise<boolean> {
+    const count = await this.repository
+      .createQueryBuilder('owner')
+      .innerJoin('owner.properties', 'property')
+      .where('owner.id = :ownerId', { ownerId })
+      .getCount();
+
+    return count > 0;
+  }
+
   // insert() fails if the id already exists; save() would overwrite it
   async save(owner: Owner): Promise<Owner> {
     await this.repository.insert(OwnerMapper.fromDomainToEntity(owner));

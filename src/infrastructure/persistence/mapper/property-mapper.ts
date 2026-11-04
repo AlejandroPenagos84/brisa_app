@@ -12,11 +12,10 @@ export class PropertyMapper {
       entity.numberOfRooms,
       entity.capacity,
       entity.pricePerNight,
+      entity.manuallyInactive,
     );
   }
 
-  // The domain status (ACTIVE/INACTIVE) has no column in the database,
-  // so it is not persisted.
   static fromDomainToEntity(property: Property): PropertyEntity {
     const data = property.getData();
     const entity = new PropertyEntity();
@@ -28,6 +27,7 @@ export class PropertyMapper {
     entity.numberOfRooms = data.numberOfRooms;
     entity.capacity = data.capacity;
     entity.pricePerNight = data.price;
+    entity.manuallyInactive = property.isManuallyInactive();
     return entity;
   }
 }

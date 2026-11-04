@@ -9,6 +9,17 @@ export interface RentalRepository {
   findByClientId(clientId: UUID): Promise<Rental[]>;
   findByKeys(keys: RentalKey[]): Promise<Rental[]>;
   findByKey(key: RentalKey): Promise<Rental | null>;
+  hasOverlappingPropertyRental(
+    propertyId: UUID,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<boolean>;
+  hasOverlappingClientRental(
+    clientId: UUID,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<boolean>;
+  updateStatuses(rentals: Rental[]): Promise<void>;
   saveWithClient(rental: Rental, client: Client): Promise<Rental>;
   update(key: RentalKey, rental: Rental): Promise<Rental>;
   deleteWithClient(key: RentalKey, client: Client): Promise<boolean>;

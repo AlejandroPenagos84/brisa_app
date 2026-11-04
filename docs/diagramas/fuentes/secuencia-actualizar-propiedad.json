@@ -1,0 +1,252 @@
+{
+ "title": "Secuencia actualizar propiedad",
+ "participants": [
+  {
+   "id": "cli",
+   "label": "Cliente HTTP",
+   "actor": true
+  },
+  {
+   "id": "pipes",
+   "label": "ValidationPipe / ParseUUIDPipe"
+  },
+  {
+   "id": "ctrl",
+   "label": "PropertyController"
+  },
+  {
+   "id": "hmap",
+   "label": "PropertyHttpMapper"
+  },
+  {
+   "id": "svc",
+   "label": "PropertyService"
+  },
+  {
+   "id": "prop",
+   "label": "Property"
+  },
+  {
+   "id": "repo",
+   "label": "PropertyRepositoryTypeORM (PropertyRepository)"
+  },
+  {
+   "id": "pmap",
+   "label": "PropertyMapper"
+  },
+  {
+   "id": "db",
+   "label": "PostgreSQL"
+  }
+ ],
+ "messages": [
+  {
+   "from": "cli",
+   "to": "pipes",
+   "label": "PATCH /properties/:id"
+  },
+  {
+   "note": "id no UUID o cuerpo inválido: 400",
+   "over": "pipes"
+  },
+  {
+   "from": "pipes",
+   "to": "ctrl",
+   "label": "update(id, UpdatePropertyRequest)",
+   "deactivate": true
+  },
+  {
+   "from": "ctrl",
+   "to": "hmap",
+   "label": "fromUpdateRequestToCommand(request)"
+  },
+  {
+   "from": "hmap",
+   "to": "ctrl",
+   "label": "UpdatePropertyCommand",
+   "return": true
+  },
+  {
+   "from": "ctrl",
+   "to": "svc",
+   "label": "update(id, command)"
+  },
+  {
+   "from": "svc",
+   "to": "repo",
+   "label": "findById(id)"
+  },
+  {
+   "from": "repo",
+   "to": "db",
+   "label": "findOneBy({ id })",
+   "activate": false
+  },
+  {
+   "from": "db",
+   "to": "repo",
+   "label": "PropertyEntity | null",
+   "return": true
+  },
+  {
+   "from": "repo",
+   "to": "pmap",
+   "label": "fromEntityToDomain(entity)",
+   "activate": false
+  },
+  {
+   "from": "pmap",
+   "to": "repo",
+   "label": "Property",
+   "return": true
+  },
+  {
+   "from": "repo",
+   "to": "svc",
+   "label": "Property | null",
+   "return": true
+  },
+  {
+   "note": "null: NotFoundException (404)",
+   "over": "svc"
+  },
+  {
+   "from": "svc",
+   "to": "prop",
+   "label": "change*() de cada campo presente",
+   "activate": false
+  },
+  {
+   "note": "Error de dominio: BadRequestException (400)",
+   "over": "svc"
+  },
+  {
+   "note": "status = INACTIVE: deactivate()",
+   "over": "svc"
+  },
+  {
+   "from": "svc",
+   "to": "prop",
+   "label": "isManuallyInactive() / deactivate()",
+   "activate": false
+  },
+  {
+   "note": "status = ACTIVE e inactiva manual:",
+   "over": "svc"
+  },
+  {
+   "from": "svc",
+   "to": "repo",
+   "label": "findOccupiedPropertyIds([id])"
+  },
+  {
+   "from": "repo",
+   "to": "db",
+   "label": "QueryBuilder join rentals (checkOutDate >= hoy)",
+   "activate": false
+  },
+  {
+   "from": "db",
+   "to": "repo",
+   "label": "ids",
+   "return": true
+  },
+  {
+   "from": "repo",
+   "to": "svc",
+   "label": "UUID[]",
+   "return": true
+  },
+  {
+   "note": "con ids: ConflictException (409)",
+   "over": "svc"
+  },
+  {
+   "from": "svc",
+   "to": "prop",
+   "label": "activate()",
+   "activate": false
+  },
+  {
+   "from": "svc",
+   "to": "repo",
+   "label": "update(id, property)"
+  },
+  {
+   "from": "repo",
+   "to": "db",
+   "label": "existsBy({ id })",
+   "activate": false
+  },
+  {
+   "from": "repo",
+   "to": "pmap",
+   "label": "fromDomainToEntity(property)",
+   "activate": false
+  },
+  {
+   "from": "repo",
+   "to": "db",
+   "label": "save(entity)",
+   "activate": false
+  },
+  {
+   "from": "repo",
+   "to": "pmap",
+   "label": "fromEntityToDomain(saved)",
+   "activate": false
+  },
+  {
+   "from": "repo",
+   "to": "svc",
+   "label": "Property",
+   "return": true
+  },
+  {
+   "from": "svc",
+   "to": "repo",
+   "label": "findOccupiedPropertyIds([id])"
+  },
+  {
+   "from": "repo",
+   "to": "db",
+   "label": "QueryBuilder join rentals",
+   "activate": false
+  },
+  {
+   "from": "repo",
+   "to": "svc",
+   "label": "UUID[]",
+   "return": true
+  },
+  {
+   "from": "svc",
+   "to": "prop",
+   "label": "applyOccupancy(ocupada)",
+   "activate": false
+  },
+  {
+   "from": "svc",
+   "to": "ctrl",
+   "label": "Property",
+   "return": true
+  },
+  {
+   "from": "ctrl",
+   "to": "hmap",
+   "label": "fromDomainToResponse(updated)"
+  },
+  {
+   "from": "hmap",
+   "to": "ctrl",
+   "label": "PropertyResponse",
+   "return": true
+  },
+  {
+   "from": "ctrl",
+   "to": "cli",
+   "label": "200 OK PropertyResponse",
+   "return": true
+  }
+ ]
+}

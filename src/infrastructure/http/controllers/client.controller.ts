@@ -12,6 +12,7 @@ import {
 import {
   ApiBadRequestResponse,
   ApiBody,
+  ApiConflictResponse,
   ApiCreatedResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -68,6 +69,9 @@ export class ClientController {
   @ApiCreatedResponse({ description: 'Client created', type: ClientResponse })
   @ApiBadRequestResponse({ description: 'Invalid client data' })
   @ApiNotFoundResponse({ description: 'City or bank not found' })
+  @ApiConflictResponse({
+    description: 'Email or bank account already registered',
+  })
   async create(
     @Body() request: CreateClientRequest,
   ): Promise<ClientResponse> {
@@ -82,6 +86,9 @@ export class ClientController {
   @ApiOkResponse({ description: 'Client updated', type: ClientResponse })
   @ApiBadRequestResponse({ description: 'Invalid client data' })
   @ApiNotFoundResponse({ description: 'Client, city or bank not found' })
+  @ApiConflictResponse({
+    description: 'Email or bank account already registered',
+  })
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() request: UpdateClientRequest,
@@ -130,8 +137,11 @@ export class ClientController {
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a client' })
   @ApiParam({ name: 'id', description: 'Client identifier', format: 'uuid' })
-  @ApiOkResponse({ description: 'Client deleted' })
+  @ApiOkResponse({ description: 'Client deleted with finished rentals' })
   @ApiNotFoundResponse({ description: 'Client not found' })
+  @ApiConflictResponse({
+    description: 'Client has active or upcoming rentals',
+  })
   async delete(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     const deleted = await this.clientService.delete(id);
     if (!deleted) {

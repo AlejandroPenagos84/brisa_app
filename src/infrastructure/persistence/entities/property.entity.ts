@@ -60,6 +60,9 @@ export class PropertyEntity {
   @JoinColumn({ name: 'city_id' })
   city: Relation<CityEntity>;
 
+  @Column({ name: 'manually_inactive', type: 'boolean', default: false })
+  manuallyInactive: boolean;
+
   @OneToMany(() => RentalEntity, (rental) => rental.property)
   rentals: Relation<RentalEntity[]>;
 }

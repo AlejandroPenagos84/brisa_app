@@ -30,6 +30,13 @@ export class RentalResponse {
     format: 'date-time',
   })
   endDate: Date;
+
+  @ApiProperty({
+    description: 'Rental status',
+    enum: ['UPCOMING', 'ACTIVE', 'FINISHED'],
+    example: 'UPCOMING',
+  })
+  status: 'UPCOMING' | 'ACTIVE' | 'FINISHED';
 }
 
 export class RentalDetailsResponse extends RentalResponse {

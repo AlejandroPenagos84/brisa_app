@@ -43,6 +43,62 @@ export class RentalRepositoryTypeORM implements RentalRepository {
     return entity ? RentalMapper.fromEntityToDomain(entity) : null;
   }
 
+  async hasOverlappingPropertyRental(
+    propertyId: UUID,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<boolean> {
+    const today = new Date().toISOString().slice(0, 10);
+    const count = await this.repository
+      .createQueryBuilder('rental')
+      .where('rental.propertyId = :propertyId', { propertyId })
+      .andWhere('rental.checkInDate <= :endDate', {
+        endDate: RentalMapper.toDateColumn(endDate),
+      })
+      .andWhere('rental.checkOutDate >= :startDate', {
+        startDate: RentalMapper.toDateColumn(startDate),
+      })
+      .andWhere('rental.checkOutDate >= :today', { today })
+      .getCount();
+
+    return count > 0;
+  }
+
+  async hasOverlappingClientRental(
+    clientId: UUID,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<boolean> {
+    const today = new Date().toISOString().slice(0, 10);
+    const count = await this.repository
+      .createQueryBuilder('rental')
+      .where('rental.clientId = :clientId', { clientId })
+      .andWhere('rental.checkInDate <= :endDate', {
+        endDate: RentalMapper.toDateColumn(endDate),
+      })
+      .andWhere('rental.checkOutDate >= :startDate', {
+        startDate: RentalMapper.toDateColumn(startDate),
+      })
+      .andWhere('rental.checkOutDate >= :today', { today })
+      .getCount();
+
+    return count > 0;
+  }
+
+  async updateStatuses(rentals: Rental[]): Promise<void> {
+    if (rentals.length === 0) return;
+
+    await this.repository.manager.transaction(async (manager) => {
+      for (const rental of rentals) {
+        await manager.update(
+          RentalEntity,
+          RentalMapper.fromKeyToEntityKey(rental.getKey()),
+          { status: rental.getStatus() },
+        );
+      }
+    });
+  }
+
   // insert() fails if the key already exists; save() would overwrite it.
   // The rental and the charged client are persisted in the same transaction.
   async saveWithClient(rental: Rental, client: Client): Promise<Rental> {

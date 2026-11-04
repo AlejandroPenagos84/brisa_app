@@ -7,6 +7,12 @@ export interface RentalKey {
   startDate: Date;
 }
 
+export enum RentalStatus {
+  UPCOMING = 'UPCOMING',
+  ACTIVE = 'ACTIVE',
+  FINISHED = 'FINISHED',
+}
+
 export class Rental {
   constructor(
     private readonly propertyId: UUID,
@@ -14,6 +20,7 @@ export class Rental {
     private readonly startDate: Date,
     private readonly endDate: Date,
     private chargedAmount: number = 0,
+    private status: RentalStatus = RentalStatus.UPCOMING,
   ) {
     this.validate();
   }
@@ -43,6 +50,10 @@ export class Rental {
     if (!Number.isFinite(this.chargedAmount) || this.chargedAmount < 0) {
       throw new Error('The charged amount is not valid');
     }
+
+    if (!Object.values(RentalStatus).includes(this.status)) {
+      throw new Error('The rental status is not valid');
+    }
   }
 
   charge(amount: number): void {
@@ -51,6 +62,24 @@ export class Rental {
     }
 
     this.chargedAmount = amount;
+  }
+
+  refreshStatus(now: Date = new Date()): void {
+    const start = this.startDate.getTime();
+    const end = this.endDate.getTime();
+    const current = now.getTime();
+
+    if (current < start) {
+      this.status = RentalStatus.UPCOMING;
+      return;
+    }
+
+    if (current < end) {
+      this.status = RentalStatus.ACTIVE;
+      return;
+    }
+
+    this.status = RentalStatus.FINISHED;
   }
 
   getKey(): RentalKey {
@@ -81,12 +110,17 @@ export class Rental {
     return this.chargedAmount;
   }
 
+  getStatus(): RentalStatus {
+    return this.status;
+  }
+
   getData() {
     return {
       propertyId: this.propertyId,
       clientId: this.clientId,
       startDate: this.startDate,
       endDate: this.endDate,
+      status: this.status,
     };
   }
 }

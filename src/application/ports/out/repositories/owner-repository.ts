@@ -7,6 +7,8 @@ export interface OwnerRepository {
   findAll(): Promise<Owner[]>;
   findByIds(ids: UUID[]): Promise<Owner[]>;
   findById(id: UUID): Promise<Owner | null>;
+  existsByEmail(email: string, excludeId?: UUID): Promise<boolean>;
+  hasProperties(ownerId: UUID): Promise<boolean>;
   save(owner: Owner): Promise<Owner>;
   update(id: UUID, owner: Owner): Promise<Owner>;
   delete(id: UUID): Promise<boolean>;

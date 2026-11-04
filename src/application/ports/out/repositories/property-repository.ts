@@ -16,7 +16,9 @@ export interface PropertyRepository {
   findById(id: UUID): Promise<Property | null>;
   findByOwnerId(ownerId: UUID): Promise<Property[]>;
   findByFilters(filters: PropertyFilters): Promise<Property[]>;
+  findOccupiedPropertyIds(propertyIds: UUID[]): Promise<UUID[]>;
+  hasActiveRentals(propertyId: UUID): Promise<boolean>;
   save(property: Property): Promise<Property>;
   update(id: UUID, property: Property): Promise<Property>;
-  delete(id: UUID): Promise<boolean>;
+  deleteWithPastRentals(propertyId: UUID): Promise<boolean>;
 }

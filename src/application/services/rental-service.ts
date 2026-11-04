@@ -1,4 +1,10 @@
-import { Rental, type RentalKey } from '@/domain/rental.js';
+import type { Client } from '@/domain/client.js';
+import type { Property } from '@/domain/property.js';
+import {
+  Rental,
+  RentalStatus,
+  type RentalKey,
+} from '@/domain/rental.js';
 import {
   BadRequestException,
   ConflictException,
@@ -48,7 +54,27 @@ export class RentalService {
     return details;
   }
 
+  async refreshAllStatuses(): Promise<number> {
+    const rentals = await this.rentalRepository.findAll();
+    return this.refreshStatuses(rentals);
+  }
+
   async save(rental: Rental): Promise<Rental> {
+    const { client, property } = await this.getClientAndProperty(rental);
+
+    this.assertStartDateIsNotPast(rental);
+    this.assertPropertyIsAvailable(property);
+    await this.assertNoConflicts(rental);
+
+    const total = this.calculateCharge(rental, property);
+    this.applyCharge(rental, client, total);
+
+    return this.rentalRepository.saveWithClient(rental, client);
+  }
+
+  private async getClientAndProperty(
+    rental: Rental,
+  ): Promise<{ client: Client; property: Property }> {
     const [client, property] = await Promise.all([
       this.clientRepository.findById(rental.getClientId()),
       this.propertyRepository.findById(rental.getPropertyId()),
@@ -66,26 +92,80 @@ export class RentalService {
       );
     }
 
-    const existing = await this.rentalRepository.findByKey(rental.getKey());
+    return { client, property };
+  }
+
+  private assertStartDateIsNotPast(rental: Rental): void {
+    const today = new Date().toISOString().slice(0, 10);
+    const startDate = rental.getStartDate().toISOString().slice(0, 10);
+
+    if (startDate < today) {
+      throw new BadRequestException(
+        'The rental start date cannot be in the past',
+      );
+    }
+  }
+
+  private assertPropertyIsAvailable(property: Property): void {
+    if (!property.isAvailableForBooking()) {
+      throw new ConflictException('The property is inactive');
+    }
+  }
+
+  private async assertNoConflicts(rental: Rental): Promise<void> {
+    const [existing, propertyOverlap, clientOverlap] = await Promise.all([
+      this.rentalRepository.findByKey(rental.getKey()),
+      this.rentalRepository.hasOverlappingPropertyRental(
+        rental.getPropertyId(),
+        rental.getStartDate(),
+        rental.getEndDate(),
+      ),
+      this.rentalRepository.hasOverlappingClientRental(
+        rental.getClientId(),
+        rental.getStartDate(),
+        rental.getEndDate(),
+      ),
+    ]);
+
     if (existing) {
       throw new ConflictException('The rental already exists');
     }
 
+    if (propertyOverlap) {
+      throw new ConflictException(
+        'The property has an overlapping active or upcoming rental',
+      );
+    }
+
+    if (clientOverlap) {
+      throw new ConflictException(
+        'The client has an overlapping active or upcoming rental',
+      );
+    }
+  }
+
+  private calculateCharge(rental: Rental, property: Property): number {
     const nights = Math.round(
       (rental.getEndDate().getTime() - rental.getStartDate().getTime()) /
         86_400_000,
     );
-    const total = Math.round(property.getPrice() * nights * 100) / 100;
 
+    return Math.round(property.getPrice() * nights * 100) / 100;
+  }
+
+  private applyCharge(
+    rental: Rental,
+    client: Client,
+    total: number,
+  ): void {
     try {
+      rental.refreshStatus(new Date());
       rental.charge(total);
       client.discount(total);
     } catch (error) {
       if (!(error instanceof Error)) throw error;
       throw new BadRequestException(error.message);
     }
-
-    return this.rentalRepository.saveWithClient(rental, client);
   }
 
   async cancel(key: RentalKey): Promise<boolean> {
@@ -94,12 +174,13 @@ export class RentalService {
       throw new NotFoundException('Rental not found');
     }
 
-    if (rental.getStartDate().getTime() <= Date.now()) {
+    const [details] = await this.loadDetails([rental]);
+    const { client } = details;
+
+    if (rental.getStatus() !== RentalStatus.UPCOMING) {
       throw new BadRequestException('The rental has already started');
     }
 
-    const [details] = await this.loadDetails([rental]);
-    const { client } = details;
     const amount = rental.getChargedAmount();
 
     if (amount <= 0) {
@@ -121,16 +202,24 @@ export class RentalService {
   private async loadDetails(rental: Rental[]): Promise<RentalDetails[]> {
     if (rental.length === 0) return [];
 
+    await this.refreshStatuses(rental);
+
     const clientsId = [...new Set(rental.map((r) => r.getClientId()))];
     const propertiesId = [...new Set(rental.map((r) => r.getPropertyId()))];
 
-    const clients = await this.clientRepository.findByIds(clientsId);
-    const properties = await this.propertyRepository.findByIds(
-      propertiesId,
-    );
+    const [clients, properties, occupiedIds] = await Promise.all([
+      this.clientRepository.findByIds(clientsId),
+      this.propertyRepository.findByIds(propertiesId),
+      this.propertyRepository.findOccupiedPropertyIds(propertiesId),
+    ]);
 
+    const occupiedPropertyIds = new Set(occupiedIds);
     const clientsById = new Map(clients.map((c) => [c.getId(), c]));
     const propertiesById = new Map(properties.map((p) => [p.getId(), p]));
+
+    for (const property of properties) {
+      property.applyOccupancy(occupiedPropertyIds.has(property.getId()));
+    }
 
     return rental.map((r) => {
       const client = clientsById.get(r.getClientId());
@@ -140,5 +229,25 @@ export class RentalService {
       }
       return { rental: r, client, property };
     });
+  }
+
+  private async refreshStatuses(rentals: Rental[]): Promise<number> {
+    const now = new Date();
+    const changed: Rental[] = [];
+
+    for (const rental of rentals) {
+      const previous = rental.getStatus();
+      rental.refreshStatus(now);
+
+      if (rental.getStatus() !== previous) {
+        changed.push(rental);
+      }
+    }
+
+    if (changed.length > 0) {
+      await this.rentalRepository.updateStatuses(changed);
+    }
+
+    return changed.length;
   }
 }

@@ -1,11 +1,15 @@
 import 'reflect-metadata';
 import { ValidationPipe } from '@nestjs/common';
-import { NestFactory } from '@nestjs/core';
+import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module.js';
+import { DatabaseExceptionFilter } from './infrastructure/http/filters/database-exception.filter.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const { httpAdapter } = app.get(HttpAdapterHost);
+
+  app.useGlobalFilters(new DatabaseExceptionFilter(httpAdapter));
 
   // Validates request DTOs with their class-validator decorators.
   // whitelist + forbidNonWhitelisted: fields not declared in the DTO return 400
