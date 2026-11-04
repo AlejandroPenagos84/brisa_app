@@ -1,3 +1,4 @@
+import { NotFoundError } from '@/application/errors/application-error.js';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
@@ -67,7 +68,7 @@ export class OwnerRepositoryTypeORM implements OwnerRepository {
 
     const exists = await this.repository.existsBy({ id });
     if (!exists) {
-      throw new Error(`Owner with id ${id} not found`);
+      throw new NotFoundError(`Owner with id ${id} not found`);
     }
 
     const saved = await this.repository.save(

@@ -1,11 +1,9 @@
 import { randomUUID } from 'node:crypto';
+import { Inject, Injectable } from '@nestjs/common';
 import {
-  BadRequestException,
-  ConflictException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+  ConflictError,
+  NotFoundError,
+} from '@/application/errors/application-error.js';
 import { CreateOwnerCommand } from '@/application/commands/create-owner.command.js';
 import type { UpdateOwnerCommand } from '@/application/commands/update-owner.command.js';
 import {
@@ -44,13 +42,13 @@ export class OwnerService {
   async update(id: UUID, command: UpdateOwnerCommand): Promise<Owner> {
     const owner = await this.ownerRepository.findById(id);
     if (!owner) {
-      throw new NotFoundException(`Owner with id ${id} not found`);
+      throw new NotFoundError(`Owner with id ${id} not found`);
     }
 
     if (command.bankId !== undefined) {
       const bank = await this.bankRepository.findById(command.bankId);
       if (!bank) {
-        throw new NotFoundException(
+        throw new NotFoundError(
           `Bank with id ${command.bankId} not found`,
         );
       }
@@ -67,26 +65,21 @@ export class OwnerService {
         id,
       );
       if (emailExists) {
-        throw new ConflictException('The email is already registered');
+        throw new ConflictError('The email is already registered');
       }
     }
 
-    try {
-      if (command.name !== undefined) {
-        owner.changeName(command.name.trim());
-      }
-      if (command.phone !== undefined) {
-        owner.changePhone(command.phone.trim());
-      }
-      if (email !== undefined) {
-        owner.changeEmail(email);
-      }
-      if (command.bankId !== undefined) {
-        owner.changeBank(command.bankId);
-      }
-    } catch (error) {
-      if (!(error instanceof Error)) throw error;
-      throw new BadRequestException(error.message);
+    if (command.name !== undefined) {
+      owner.changeName(command.name.trim());
+    }
+    if (command.phone !== undefined) {
+      owner.changePhone(command.phone.trim());
+    }
+    if (email !== undefined) {
+      owner.changeEmail(email);
+    }
+    if (command.bankId !== undefined) {
+      owner.changeBank(command.bankId);
     }
 
     return this.ownerRepository.update(id, owner);
@@ -97,28 +90,21 @@ export class OwnerService {
   ): Promise<{ owner: Owner; bank: Bank }> {
     const bank = await this.bankRepository.findById(command.bankId);
     if (!bank) {
-      throw new NotFoundException(`Bank with id ${command.bankId} not found`);
+      throw new NotFoundError(`Bank with id ${command.bankId} not found`);
     }
 
     const email = command.email.trim().toLowerCase();
     if (await this.ownerRepository.existsByEmail(email)) {
-      throw new ConflictException('The email is already registered');
+      throw new ConflictError('The email is already registered');
     }
 
-    let owner: Owner;
-
-    try {
-      owner = new Owner(
-        randomUUID(),
-        command.name,
-        command.phone,
-        email,
-        command.bankId,
-      );
-    } catch (error) {
-      if (!(error instanceof Error)) throw error;
-      throw new BadRequestException(error.message);
-    }
+    const owner = new Owner(
+      randomUUID(),
+      command.name,
+      command.phone,
+      email,
+      command.bankId,
+    );
 
     const savedOwner = await this.ownerRepository.save(owner);
     return { owner: savedOwner, bank };
@@ -126,7 +112,7 @@ export class OwnerService {
 
   async delete(id: UUID): Promise<boolean> {
     if (await this.ownerRepository.hasProperties(id)) {
-      throw new ConflictException(
+      throw new ConflictError(
         `Owner with id ${id} has properties and cannot be deleted`,
       );
     }

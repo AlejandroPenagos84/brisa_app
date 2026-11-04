@@ -1,4 +1,6 @@
 import { UUID } from '@/utils/types.js';
+import { DomainError } from './errors/domain-error.js';
+import { DomainErrorCode } from './errors/domain-error-codes.js';
 
 export class Owner {
   constructor(
@@ -13,25 +15,25 @@ export class Owner {
 
   private validate(): void {
     if (!this.name.trim()) {
-      throw new Error('The name is required');
+      throw new DomainError(DomainErrorCode.NAME_REQUIRED, 'The name is required');
     }
 
     if (!this.email.trim()) {
-      throw new Error('The email is required');
+      throw new DomainError(DomainErrorCode.EMAIL_REQUIRED, 'The email is required');
     }
 
     if (!this.phone.trim()) {
-      throw new Error('The phone is required');
+      throw new DomainError(DomainErrorCode.PHONE_REQUIRED, 'The phone is required');
     }
 
     if (!this.bankId.trim()) {
-      throw new Error('The bank is not valid');
+      throw new DomainError(DomainErrorCode.INVALID_BANK, 'The bank is not valid');
     }
   }
 
   changeName(name: string): void {
     if (!name.trim()) {
-      throw new Error('The name is required');
+      throw new DomainError(DomainErrorCode.NAME_REQUIRED, 'The name is required');
     }
 
     this.name = name;
@@ -39,7 +41,7 @@ export class Owner {
 
   changePhone(phone: string): void {
     if (!phone.trim()) {
-      throw new Error('The phone is required');
+      throw new DomainError(DomainErrorCode.PHONE_REQUIRED, 'The phone is required');
     }
 
     this.phone = phone;
@@ -47,7 +49,7 @@ export class Owner {
 
   changeEmail(email: string): void {
     if (!email.trim()) {
-      throw new Error('The email is required');
+      throw new DomainError(DomainErrorCode.EMAIL_REQUIRED, 'The email is required');
     }
 
     this.email = email;
@@ -55,7 +57,7 @@ export class Owner {
 
   changeBank(bankId: UUID): void {
     if (!bankId.trim()) {
-      throw new Error('The bank is not valid');
+      throw new DomainError(DomainErrorCode.INVALID_BANK, 'The bank is not valid');
     }
 
     this.bankId = bankId;

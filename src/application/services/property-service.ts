@@ -1,11 +1,9 @@
 import { randomUUID } from 'node:crypto';
+import { Inject, Injectable } from '@nestjs/common';
 import {
-  BadRequestException,
-  ConflictException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+  ConflictError,
+  NotFoundError,
+} from '@/application/errors/application-error.js';
 import type { CreatePropertyCommand } from '../commands/create-property.command.js';
 import {
   PROPERTY_REPOSITORY,
@@ -123,32 +121,25 @@ export class PropertyService {
     ]);
 
     if (!owner) {
-      throw new NotFoundException(
+      throw new NotFoundError(
         `Owner with id ${command.ownerId} not found`,
       );
     }
 
     if (!city) {
-      throw new NotFoundException(`City with id ${command.cityId} not found`);
+      throw new NotFoundError(`City with id ${command.cityId} not found`);
     }
 
-    let property: Property;
-
-    try {
-      property = new Property(
-        randomUUID(),
-        command.ownerId,
-        command.cityId,
-        command.address,
-        command.area,
-        command.numberOfRooms,
-        command.capacity,
-        command.price,
-      );
-    } catch (error) {
-      if (!(error instanceof Error)) throw error;
-      throw new BadRequestException(error.message);
-    }
+    const property = new Property(
+      randomUUID(),
+      command.ownerId,
+      command.cityId,
+      command.address,
+      command.area,
+      command.numberOfRooms,
+      command.capacity,
+      command.price,
+    );
 
     return this.propertyRepository.save(property);
   }
@@ -156,7 +147,7 @@ export class PropertyService {
   async update(id: UUID, command: UpdatePropertyCommand): Promise<Property> {
     const property = await this.propertyRepository.findById(id);
     if (!property) {
-      throw new NotFoundException(`Property with id ${id} not found`);
+      throw new NotFoundError(`Property with id ${id} not found`);
     }
 
     this.applyFieldChanges(property, command);
@@ -171,25 +162,20 @@ export class PropertyService {
     property: Property,
     command: UpdatePropertyCommand,
   ): void {
-    try {
-      if (command.address !== undefined) {
-        property.changeAddress(command.address);
-      }
-      if (command.area !== undefined) {
-        property.changeArea(command.area);
-      }
-      if (command.numberOfRooms !== undefined) {
-        property.changeNumberOfRooms(command.numberOfRooms);
-      }
-      if (command.capacity !== undefined) {
-        property.changeCapacity(command.capacity);
-      }
-      if (command.price !== undefined) {
-        property.changePrice(command.price);
-      }
-    } catch (error) {
-      if (!(error instanceof Error)) throw error;
-      throw new BadRequestException(error.message);
+    if (command.address !== undefined) {
+      property.changeAddress(command.address);
+    }
+    if (command.area !== undefined) {
+      property.changeArea(command.area);
+    }
+    if (command.numberOfRooms !== undefined) {
+      property.changeNumberOfRooms(command.numberOfRooms);
+    }
+    if (command.capacity !== undefined) {
+      property.changeCapacity(command.capacity);
+    }
+    if (command.price !== undefined) {
+      property.changePrice(command.price);
     }
   }
 
@@ -213,7 +199,7 @@ export class PropertyService {
       await this.propertyRepository.findOccupiedPropertyIds([id]);
 
     if (occupiedIds.length > 0) {
-      throw new ConflictException(
+      throw new ConflictError(
         `Property with id ${id} has active or upcoming rentals`,
       );
     }
@@ -223,7 +209,7 @@ export class PropertyService {
 
   async delete(id: UUID): Promise<boolean> {
     if (await this.propertyRepository.hasActiveRentals(id)) {
-      throw new ConflictException(
+      throw new ConflictError(
         `Property with id ${id} has active or upcoming rentals`,
       );
     }
@@ -232,7 +218,7 @@ export class PropertyService {
       await this.propertyRepository.deleteWithPastRentals(id);
 
     if (!deleted) {
-      throw new NotFoundException(`Property with id ${id} not found`);
+      throw new NotFoundError(`Property with id ${id} not found`);
     }
 
     return true;

@@ -107,6 +107,9 @@ export class ClientController {
     type: ClientResponse,
   })
   @ApiBadRequestResponse({ description: 'Invalid amount' })
+  @ApiConflictResponse({
+    description: 'The balance exceeds the maximum allowed',
+  })
   @ApiNotFoundResponse({ description: 'Client not found' })
   async deposit(
     @Param('id', ParseUUIDPipe) id: string,
@@ -124,7 +127,8 @@ export class ClientController {
     description: 'Withdrawal applied and client returned',
     type: ClientResponse,
   })
-  @ApiBadRequestResponse({ description: 'Invalid amount or insufficient balance' })
+  @ApiBadRequestResponse({ description: 'Invalid amount' })
+  @ApiConflictResponse({ description: 'Insufficient balance' })
   @ApiNotFoundResponse({ description: 'Client not found' })
   async withdraw(
     @Param('id', ParseUUIDPipe) id: string,

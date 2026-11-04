@@ -1,4 +1,6 @@
 import { UUID } from '@/utils/types.js';
+import { DomainError } from './errors/domain-error.js';
+import { DomainErrorCode } from './errors/domain-error-codes.js';
 
 export enum PropertyStatus {
   ACTIVE = 'ACTIVE',
@@ -26,33 +28,33 @@ export class Property {
 
   private validate(): void {
     if (!this.address.trim()) {
-      throw new Error('The address is required');
+      throw new DomainError(DomainErrorCode.ADDRESS_REQUIRED, 'The address is required');
     }
 
     if (this.area <= 0) {
-      throw new Error('The area must be greater than zero');
+      throw new DomainError(DomainErrorCode.INVALID_AREA, 'The area must be greater than zero');
     }
 
     if (this.numberOfRooms < 0) {
-      throw new Error('The number of rooms cannot be negative');
+      throw new DomainError(DomainErrorCode.INVALID_NUMBER_OF_ROOMS, 'The number of rooms cannot be negative');
     }
 
     if (this.capacity <= 0) {
-      throw new Error('The capacity must be greater than zero');
+      throw new DomainError(DomainErrorCode.INVALID_CAPACITY, 'The capacity must be greater than zero');
     }
 
     if (this.price <= 0) {
-      throw new Error('The price must be greater than zero');
+      throw new DomainError(DomainErrorCode.INVALID_PRICE, 'The price must be greater than zero');
     }
 
     if (typeof this.manuallyInactive !== 'boolean') {
-      throw new Error('The property availability is not valid');
+      throw new DomainError(DomainErrorCode.INVALID_PROPERTY_AVAILABILITY, 'The property availability is not valid');
     }
   }
 
   changeAddress(address: string): void {
     if (!address.trim()) {
-      throw new Error('The address is required');
+      throw new DomainError(DomainErrorCode.ADDRESS_REQUIRED, 'The address is required');
     }
 
     this.address = address;
@@ -60,7 +62,7 @@ export class Property {
 
   changeArea(area: number): void {
     if (area <= 0) {
-      throw new Error('The area must be greater than zero');
+      throw new DomainError(DomainErrorCode.INVALID_AREA, 'The area must be greater than zero');
     }
 
     this.area = area;
@@ -68,14 +70,14 @@ export class Property {
 
   changeNumberOfRooms(numberOfRooms: number): void {
     if (numberOfRooms < 0) {
-      throw new Error('The number of rooms cannot be negative');
+      throw new DomainError(DomainErrorCode.INVALID_NUMBER_OF_ROOMS, 'The number of rooms cannot be negative');
     }
     this.numberOfRooms = numberOfRooms;
   }
 
   changePrice(price: number): void {
     if (price <= 0) {
-      throw new Error('The price must be greater than zero');
+      throw new DomainError(DomainErrorCode.INVALID_PRICE, 'The price must be greater than zero');
     }
 
     this.price = price;
@@ -83,7 +85,7 @@ export class Property {
 
   changeCapacity(capacity: number): void {
     if (capacity <= 0) {
-      throw new Error('The capacity must be greater than zero');
+      throw new DomainError(DomainErrorCode.INVALID_CAPACITY, 'The capacity must be greater than zero');
     }
 
     this.capacity = capacity;
@@ -95,7 +97,7 @@ export class Property {
 
   deactivate(): void {
     if (this.manuallyInactive) {
-      throw new Error('The property is already inactive');
+      throw new DomainError(DomainErrorCode.PROPERTY_ALREADY_INACTIVE, 'The property is already inactive');
     }
 
     this.manuallyInactive = true;
@@ -103,7 +105,7 @@ export class Property {
 
   activate(): void {
     if (!this.manuallyInactive) {
-      throw new Error('The property is already active');
+      throw new DomainError(DomainErrorCode.PROPERTY_ALREADY_ACTIVE, 'The property is already active');
     }
 
     this.manuallyInactive = false;

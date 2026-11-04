@@ -142,8 +142,8 @@ export class RentalController {
     description: 'Rental cancelled and charged amount refunded',
   })
   @ApiNotFoundResponse({ description: 'Rental not found' })
-  @ApiBadRequestResponse({
-    description: 'The rental has already started or the refund is invalid',
+  @ApiConflictResponse({
+    description: 'The rental has already started or has no charged amount',
   })
   async cancel(
     @Param('propertyId', ParseUUIDPipe) propertyId: string,
@@ -157,12 +157,12 @@ export class RentalController {
   @ApiOperation({ summary: 'Create a rental' })
   @ApiCreatedResponse({ description: 'Rental created', type: RentalResponse })
   @ApiBadRequestResponse({
-    description: 'Invalid rental dates, data or insufficient balance',
+    description: 'Invalid rental dates or data',
   })
   @ApiNotFoundResponse({ description: 'Client or property not found' })
   @ApiConflictResponse({
     description:
-      'The rental already exists, the property is inactive, or the dates overlap',
+      'The rental already exists, the property is inactive, the dates overlap, or the client has insufficient balance',
   })
   async create(@Body() request: CreateRentalRequest): Promise<RentalResponse> {
     const rental = RentalHttpMapper.fromCreateRequestToDomain(request);

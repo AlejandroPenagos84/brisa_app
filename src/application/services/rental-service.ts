@@ -5,18 +5,17 @@ import {
   RentalStatus,
   type RentalKey,
 } from '@/domain/rental.js';
+import { Inject, Injectable } from '@nestjs/common';
 import {
-  BadRequestException,
-  ConflictException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+  ConflictError,
+  NotFoundError,
+} from '@/application/errors/application-error.js';
 import {
   RENTAL_REPOSITORY,
   type RentalRepository,
 } from '@/application/ports/out/repositories/rental-repository.js';
 import { UUID } from '@/utils/types.js';
+import { businessTodayAsDate } from '@/utils/business-date.js';
 import { RentalDetails } from '../models/rental-details.js';
 import { CLIENT_REPOSITORY, type ClientRepository } from '../ports/out/repositories/client-repository.js';
 import { PROPERTY_REPOSITORY, type PropertyRepository } from '../ports/out/repositories/property-repository.js';
@@ -62,7 +61,7 @@ export class RentalService {
   async save(rental: Rental): Promise<Rental> {
     const { client, property } = await this.getClientAndProperty(rental);
 
-    this.assertStartDateIsNotPast(rental);
+    rental.assertCanStartOn(businessTodayAsDate());
     this.assertPropertyIsAvailable(property);
     await this.assertNoConflicts(rental);
 
@@ -81,13 +80,13 @@ export class RentalService {
     ]);
 
     if (!client) {
-      throw new NotFoundException(
+      throw new NotFoundError(
         `Client with id ${rental.getClientId()} not found`,
       );
     }
 
     if (!property) {
-      throw new NotFoundException(
+      throw new NotFoundError(
         `Property with id ${rental.getPropertyId()} not found`,
       );
     }
@@ -95,20 +94,9 @@ export class RentalService {
     return { client, property };
   }
 
-  private assertStartDateIsNotPast(rental: Rental): void {
-    const today = new Date().toISOString().slice(0, 10);
-    const startDate = rental.getStartDate().toISOString().slice(0, 10);
-
-    if (startDate < today) {
-      throw new BadRequestException(
-        'The rental start date cannot be in the past',
-      );
-    }
-  }
-
   private assertPropertyIsAvailable(property: Property): void {
     if (!property.isAvailableForBooking()) {
-      throw new ConflictException('The property is inactive');
+      throw new ConflictError('The property is inactive');
     }
   }
 
@@ -128,17 +116,17 @@ export class RentalService {
     ]);
 
     if (existing) {
-      throw new ConflictException('The rental already exists');
+      throw new ConflictError('The rental already exists');
     }
 
     if (propertyOverlap) {
-      throw new ConflictException(
+      throw new ConflictError(
         'The property has an overlapping active or upcoming rental',
       );
     }
 
     if (clientOverlap) {
-      throw new ConflictException(
+      throw new ConflictError(
         'The client has an overlapping active or upcoming rental',
       );
     }
@@ -158,43 +146,33 @@ export class RentalService {
     client: Client,
     total: number,
   ): void {
-    try {
-      rental.refreshStatus(new Date());
-      rental.charge(total);
-      client.discount(total);
-    } catch (error) {
-      if (!(error instanceof Error)) throw error;
-      throw new BadRequestException(error.message);
-    }
+    rental.refreshStatus(businessTodayAsDate());
+    rental.charge(total);
+    client.discount(total);
   }
 
   async cancel(key: RentalKey): Promise<boolean> {
     const rental = await this.rentalRepository.findByKey(key);
     if (!rental) {
-      throw new NotFoundException('Rental not found');
+      throw new NotFoundError('Rental not found');
     }
 
     const [details] = await this.loadDetails([rental]);
     const { client } = details;
 
     if (rental.getStatus() !== RentalStatus.UPCOMING) {
-      throw new BadRequestException('The rental has already started');
+      throw new ConflictError('The rental has already started');
     }
 
     const amount = rental.getChargedAmount();
 
     if (amount <= 0) {
-      throw new BadRequestException(
+      throw new ConflictError(
         'The rental has no charged amount to refund',
       );
     }
 
-    try {
-      client.deposit(amount);
-    } catch (error) {
-      if (!(error instanceof Error)) throw error;
-      throw new BadRequestException(error.message);
-    }
+    client.deposit(amount);
 
     return this.rentalRepository.deleteWithClient(key, client);
   }
@@ -232,12 +210,12 @@ export class RentalService {
   }
 
   private async refreshStatuses(rentals: Rental[]): Promise<number> {
-    const now = new Date();
+    const today = businessTodayAsDate();
     const changed: Rental[] = [];
 
     for (const rental of rentals) {
       const previous = rental.getStatus();
-      rental.refreshStatus(now);
+      rental.refreshStatus(today);
 
       if (rental.getStatus() !== previous) {
         changed.push(rental);

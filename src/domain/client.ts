@@ -1,4 +1,6 @@
 import { UUID } from '@/utils/types.js';
+import { DomainError } from './errors/domain-error.js';
+import { DomainErrorCode } from './errors/domain-error-codes.js';
 
 // NUMERIC(12,2) in the database: up to 9,999,999,999.99
 const MAX_BALANCE_IN_CENTS = 999_999_999_999;
@@ -24,37 +26,37 @@ export class Client {
       this.balance < 0 ||
       Client.toCents(this.balance) > MAX_BALANCE_IN_CENTS
     ) {
-      throw new Error('The balance is not valid');
+      throw new DomainError(DomainErrorCode.INVALID_BALANCE, 'The balance is not valid');
     }
 
     if (!this.name.trim()) {
-      throw new Error('The name is required');
+      throw new DomainError(DomainErrorCode.NAME_REQUIRED, 'The name is required');
     }
 
     if (!this.phone.trim()) {
-      throw new Error('The phone is required');
+      throw new DomainError(DomainErrorCode.PHONE_REQUIRED, 'The phone is required');
     }
 
     if (!this.email.trim()) {
-      throw new Error('The email is required');
+      throw new DomainError(DomainErrorCode.EMAIL_REQUIRED, 'The email is required');
     }
 
     if (!this.bankId.trim()) {
-      throw new Error('The bank is not valid');
+      throw new DomainError(DomainErrorCode.INVALID_BANK, 'The bank is not valid');
     }
 
     if (!this.accountNumber.trim()) {
-      throw new Error('The account number is required');
+      throw new DomainError(DomainErrorCode.ACCOUNT_NUMBER_REQUIRED, 'The account number is required');
     }
 
     if (!this.accountType.trim()) {
-      throw new Error('The account type is required');
+      throw new DomainError(DomainErrorCode.ACCOUNT_TYPE_REQUIRED, 'The account type is required');
     }
   }
 
   changeName(name: string): void {
     if (!name.trim()) {
-      throw new Error('The name is required');
+      throw new DomainError(DomainErrorCode.NAME_REQUIRED, 'The name is required');
     }
 
     this.name = name;
@@ -62,7 +64,7 @@ export class Client {
 
   changeCityId(cityId: string): void {
     if (!cityId.trim()) {
-      throw new Error('The city is not valid');
+      throw new DomainError(DomainErrorCode.INVALID_CITY, 'The city is not valid');
     }
 
     this.cityId = cityId;
@@ -70,7 +72,7 @@ export class Client {
 
   changePhone(phone: string): void {
     if (!phone.trim()) {
-      throw new Error('The phone is required');
+      throw new DomainError(DomainErrorCode.PHONE_REQUIRED, 'The phone is required');
     }
 
     this.phone = phone;
@@ -78,7 +80,7 @@ export class Client {
 
   changeEmail(email: string): void {
     if (!email.trim()) {
-      throw new Error('The email is required');
+      throw new DomainError(DomainErrorCode.EMAIL_REQUIRED, 'The email is required');
     }
 
     this.email = email;
@@ -90,7 +92,7 @@ export class Client {
     accountType: string,
   ): void {
     if (!bankId.trim() || !accountNumber.trim() || !accountType.trim()) {
-      throw new Error('The bank account data is not valid');
+      throw new DomainError(DomainErrorCode.INVALID_BANK_ACCOUNT, 'The bank account data is not valid');
     }
 
     this.bankId = bankId;
@@ -104,7 +106,7 @@ export class Client {
     const newBalanceInCents =
       Client.toCents(this.balance) + Client.toCents(amount);
     if (newBalanceInCents > MAX_BALANCE_IN_CENTS) {
-      throw new Error('The balance exceeds the maximum allowed');
+      throw new DomainError(DomainErrorCode.BALANCE_LIMIT_EXCEEDED, 'The balance exceeds the maximum allowed');
     }
 
     this.balance = Client.fromCents(newBalanceInCents);
@@ -117,7 +119,7 @@ export class Client {
     const amountInCents = Client.toCents(amount);
 
     if (amountInCents > balanceInCents) {
-      throw new Error('Insufficient balance');
+      throw new DomainError(DomainErrorCode.INSUFFICIENT_BALANCE, 'Insufficient balance');
     }
 
     this.balance = Client.fromCents(balanceInCents - amountInCents);
@@ -131,7 +133,7 @@ export class Client {
   // (0.1 + 0.2 = 0.30000000000000004)
   private static validateAmount(amount: number): void {
     if (!Client.hasAtMostTwoDecimals(amount) || amount <= 0) {
-      throw new Error('The amount must be greater than zero');
+      throw new DomainError(DomainErrorCode.INVALID_AMOUNT, 'The amount must be greater than zero');
     }
   }
 

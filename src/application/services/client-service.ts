@@ -1,11 +1,9 @@
 import { randomUUID } from 'node:crypto';
+import { Inject, Injectable } from '@nestjs/common';
 import {
-  BadRequestException,
-  ConflictException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+  ConflictError,
+  NotFoundError,
+} from '@/application/errors/application-error.js';
 import { Client } from '@/domain/client.js';
 import { UUID } from '@/utils/types.js';
 import type { CreateClientCommand } from '../commands/create-client.command.js';
@@ -102,24 +100,17 @@ export class ClientService {
   async create(command: CreateClientCommand): Promise<Client> {
     const { email, accountNumber } = await this.validateCreate(command);
 
-    let client: Client;
-
-    try {
-      client = new Client(
-        randomUUID(),
-        command.name,
-        command.phone,
-        email,
-        command.cityId,
-        command.bankId,
-        accountNumber,
-        command.accountType,
-        command.balance,
-      );
-    } catch (error) {
-      if (!(error instanceof Error)) throw error;
-      throw new BadRequestException(error.message);
-    }
+    const client = new Client(
+      randomUUID(),
+      command.name,
+      command.phone,
+      email,
+      command.cityId,
+      command.bankId,
+      accountNumber,
+      command.accountType,
+      command.balance,
+    );
 
     return this.clientRepository.save(client);
   }
@@ -140,23 +131,23 @@ export class ClientService {
     ]);
 
     if (!city) {
-      throw new NotFoundException(
+      throw new NotFoundError(
         `City with id ${command.cityId} not found`,
       );
     }
 
     if (!bank) {
-      throw new NotFoundException(
+      throw new NotFoundError(
         `Bank with id ${command.bankId} not found`,
       );
     }
 
     if (emailExists) {
-      throw new ConflictException('The email is already registered');
+      throw new ConflictError('The email is already registered');
     }
 
     if (accountExists) {
-      throw new ConflictException(
+      throw new ConflictError(
         'The bank account is already registered',
       );
     }
@@ -180,7 +171,7 @@ export class ClientService {
     if (command.cityId !== undefined) {
       const city = await this.cityRepository.findById(command.cityId);
       if (!city) {
-        throw new NotFoundException(
+        throw new NotFoundError(
           `City with id ${command.cityId} not found`,
         );
       }
@@ -189,7 +180,7 @@ export class ClientService {
     if (command.bankId !== undefined) {
       const bank = await this.bankRepository.findById(command.bankId);
       if (!bank) {
-        throw new NotFoundException(
+        throw new NotFoundError(
           `Bank with id ${command.bankId} not found`,
         );
       }
@@ -229,11 +220,11 @@ export class ClientService {
     ]);
 
     if (emailExists) {
-      throw new ConflictException('The email is already registered');
+      throw new ConflictError('The email is already registered');
     }
 
     if (accountExists) {
-      throw new ConflictException(
+      throw new ConflictError(
         'The bank account is already registered',
       );
     }
@@ -246,42 +237,32 @@ export class ClientService {
     command: UpdateClientCommand,
     values: ClientUpdateValues,
   ): void {
-    try {
-      if (command.name !== undefined) {
-        client.changeName(command.name);
-      }
-      if (command.phone !== undefined) {
-        client.changePhone(command.phone);
-      }
-      if (values.email !== undefined) {
-        client.changeEmail(values.email);
-      }
-      if (command.cityId !== undefined) {
-        client.changeCityId(command.cityId);
-      }
+    if (command.name !== undefined) {
+      client.changeName(command.name);
+    }
+    if (command.phone !== undefined) {
+      client.changePhone(command.phone);
+    }
+    if (values.email !== undefined) {
+      client.changeEmail(values.email);
+    }
+    if (command.cityId !== undefined) {
+      client.changeCityId(command.cityId);
+    }
 
-      if (values.bankAccountChanged) {
-        client.changeBankAccount(
-          values.bankId,
-          values.accountNumber,
-          command.accountType ?? client.getAccountType(),
-        );
-      }
-    } catch (error) {
-      if (!(error instanceof Error)) throw error;
-      throw new BadRequestException(error.message);
+    if (values.bankAccountChanged) {
+      client.changeBankAccount(
+        values.bankId,
+        values.accountNumber,
+        command.accountType ?? client.getAccountType(),
+      );
     }
   }
 
   async deposit(id: UUID, amount: number): Promise<Client> {
     const client = await this.getClientOrThrow(id);
 
-    try {
-      client.deposit(amount);
-    } catch (error) {
-      if (!(error instanceof Error)) throw error;
-      throw new BadRequestException(error.message);
-    }
+    client.deposit(amount);
 
     return this.clientRepository.update(id, client);
   }
@@ -289,19 +270,14 @@ export class ClientService {
   async withdraw(id: UUID, amount: number): Promise<Client> {
     const client = await this.getClientOrThrow(id);
 
-    try {
-      client.discount(amount);
-    } catch (error) {
-      if (!(error instanceof Error)) throw error;
-      throw new BadRequestException(error.message);
-    }
+    client.discount(amount);
 
     return this.clientRepository.update(id, client);
   }
 
   async delete(id: UUID): Promise<boolean> {
     if (await this.clientRepository.hasActiveRentals(id)) {
-      throw new ConflictException(
+      throw new ConflictError(
         `Client with id ${id} has active or upcoming rentals`,
       );
     }
@@ -312,7 +288,7 @@ export class ClientService {
   private async getClientOrThrow(id: UUID): Promise<Client> {
     const client = await this.clientRepository.findById(id);
     if (!client) {
-      throw new NotFoundException(`Client with id ${id} not found`);
+      throw new NotFoundError(`Client with id ${id} not found`);
     }
     return client;
   }

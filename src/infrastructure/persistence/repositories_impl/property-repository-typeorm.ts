@@ -1,3 +1,5 @@
+import { businessToday } from '@/utils/business-date.js';
+import { NotFoundError } from '@/application/errors/application-error.js';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
@@ -77,7 +79,7 @@ export class PropertyRepositoryTypeORM implements PropertyRepository {
   async findOccupiedPropertyIds(propertyIds: UUID[]): Promise<UUID[]> {
     if (propertyIds.length === 0) return [];
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = businessToday();
     const rows = await this.repository
       .createQueryBuilder('property')
       .innerJoin('property.rentals', 'rental')
@@ -91,7 +93,7 @@ export class PropertyRepositoryTypeORM implements PropertyRepository {
   }
 
   async hasActiveRentals(propertyId: UUID): Promise<boolean> {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = businessToday();
     const count = await this.repository
       .createQueryBuilder('property')
       .innerJoin('property.rentals', 'rental')
@@ -114,7 +116,7 @@ export class PropertyRepositoryTypeORM implements PropertyRepository {
 
     const exists = await this.repository.existsBy({ id });
     if (!exists) {
-      throw new Error(`Property with id ${id} not found`);
+      throw new NotFoundError(`Property with id ${id} not found`);
     }
 
     const saved = await this.repository.save(
@@ -124,7 +126,7 @@ export class PropertyRepositoryTypeORM implements PropertyRepository {
   }
 
   async deleteWithPastRentals(propertyId: UUID): Promise<boolean> {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = businessToday();
 
     return this.repository.manager.transaction(async (manager) => {
       await manager.delete(RentalEntity, {

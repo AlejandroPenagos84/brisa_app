@@ -1,3 +1,5 @@
+import { businessToday } from '@/utils/business-date.js';
+import { NotFoundError } from '@/application/errors/application-error.js';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -48,7 +50,7 @@ export class RentalRepositoryTypeORM implements RentalRepository {
     startDate: Date,
     endDate: Date,
   ): Promise<boolean> {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = businessToday();
     const count = await this.repository
       .createQueryBuilder('rental')
       .where('rental.propertyId = :propertyId', { propertyId })
@@ -69,7 +71,7 @@ export class RentalRepositoryTypeORM implements RentalRepository {
     startDate: Date,
     endDate: Date,
   ): Promise<boolean> {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = businessToday();
     const count = await this.repository
       .createQueryBuilder('rental')
       .where('rental.clientId = :clientId', { clientId })
@@ -131,7 +133,7 @@ export class RentalRepositoryTypeORM implements RentalRepository {
 
     const exists = await this.repository.existsBy(entityKey);
     if (!exists) {
-      throw new Error('Rental not found');
+      throw new NotFoundError('Rental not found');
     }
 
     const saved = await this.repository.save(
@@ -149,7 +151,7 @@ export class RentalRepositoryTypeORM implements RentalRepository {
       );
 
       if ((result.affected ?? 0) === 0) {
-        throw new Error('Rental not found');
+        throw new NotFoundError('Rental not found');
       }
 
       await manager.save(

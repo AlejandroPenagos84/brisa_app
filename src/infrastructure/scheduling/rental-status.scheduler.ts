@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { RentalService } from '@/application/services/rental-service.js';
+import { businessTimeZone } from '@/utils/business-date.js';
 
 @Injectable()
 export class RentalStatusScheduler {
@@ -8,7 +9,8 @@ export class RentalStatusScheduler {
 
   constructor(private readonly rentalService: RentalService) {}
 
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  // Midnight in the business time zone, when the calendar day changes
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT, { timeZone: businessTimeZone() })
   async refreshRentalStatuses(): Promise<void> {
     const updated = await this.rentalService.refreshAllStatuses();
 
