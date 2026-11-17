@@ -1,8 +1,8 @@
 import { City } from '@/domain/city.js';
-import { UUID } from '@/utils/types.js';
-import type { CityDetails } from '../models/city-details.js';
-import type { CityRepository } from '../ports/out/repositories/city-repository.js';
-import type { CountryRepository } from '../ports/out/repositories/country-repository.js';
+import type { UUID } from '@/utils/types.js';
+import type { CityDetails } from '@/application/models/city-details.js';
+import type { CityRepository } from '@/application/ports/out/repositories/city-repository.js';
+import type { CountryRepository } from '@/application/ports/out/repositories/country-repository.js';
 
 // Plain class: city.module.ts builds it with useFactory, so the
 // application layer does not depend on Nest

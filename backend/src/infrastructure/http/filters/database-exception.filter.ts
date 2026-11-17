@@ -17,17 +17,14 @@ const UNIQUE_CONSTRAINT_MESSAGES: Record<string, string> = {
   uq_owners_email_lower: 'The email is already registered',
   uq_clients_email_lower: 'The email is already registered',
   uq_clients_bank_account: 'The bank account is already registered',
+  uq_owners_bank_account: 'The bank account is already registered',
   rentals_pkey: 'The rental already exists',
 };
 
-export function mapDatabaseError(
-  error: unknown,
-): DatabaseErrorResponse | null {
+export function mapDatabaseError(error: unknown): DatabaseErrorResponse | null {
   if (!(error instanceof QueryFailedError)) return null;
 
-  const driverError = error.driverError as
-    | PostgresDriverError
-    | undefined;
+  const driverError = error.driverError as PostgresDriverError | undefined;
 
   if (!driverError) return null;
 
@@ -49,16 +46,14 @@ export function mapDatabaseError(
     if (constraint === 'excl_rentals_client_period') {
       return {
         statusCode: HttpStatus.CONFLICT,
-        message:
-          'The client has an overlapping active or upcoming rental',
+        message: 'The client has an overlapping active or upcoming rental',
       };
     }
 
     if (constraint === 'excl_rentals_property_period') {
       return {
         statusCode: HttpStatus.CONFLICT,
-        message:
-          'The property has an overlapping active or upcoming rental',
+        message: 'The property has an overlapping active or upcoming rental',
       };
     }
 

@@ -3,7 +3,7 @@ import type { BankDetails } from '@/application/models/bank-details.js';
 import {
   BankResponse,
   BankDetailsResponse,
-} from '../dto/response/bank.response.js';
+} from '@/infrastructure/http/dto/response/bank.response.js';
 import { BankSummaryHttpMapper } from './bank-summary-http.mapper.js';
 import { CountryHttpMapper } from './country-http.mapper.js';
 

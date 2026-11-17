@@ -1,4 +1,3 @@
-import { businessToday } from '@/infrastructure/time/business-date.js';
 import { NotFoundError } from '@/application/errors/application-error.js';
 import { EntityManager, In, LessThan, Repository } from 'typeorm';
 import { ClientRepository } from '@/application/ports/out/repositories/client-repository.js';
@@ -6,7 +5,8 @@ import { Client } from '@/domain/client.js';
 import { ClientEntity } from '@/infrastructure/persistence/entities/client.entity.js';
 import { RentalEntity } from '@/infrastructure/persistence/entities/rental.entity.js';
 import { ClientMapper } from '@/infrastructure/persistence/mapper/client-mapper.js';
-import { UUID } from '@/utils/types.js';
+import { RentalMapper } from '@/infrastructure/persistence/mapper/rental-mapper.js';
+import type { UUID } from '@/utils/types.js';
 
 export class ClientRepositoryTypeORM implements ClientRepository {
   private readonly repository: Repository<ClientEntity>;
@@ -71,18 +71,6 @@ export class ClientRepositoryTypeORM implements ClientRepository {
     return count > 0;
   }
 
-  async hasActiveRentals(clientId: UUID): Promise<boolean> {
-    const today = businessToday();
-    const count = await this.repository
-      .createQueryBuilder('client')
-      .innerJoin('client.rentals', 'rental')
-      .where('client.id = :clientId', { clientId })
-      .andWhere('rental.checkOutDate >= :today', { today })
-      .getCount();
-
-    return count > 0;
-  }
-
   // insert() fails if the id already exists; save() would overwrite it
   async save(client: Client): Promise<Client> {
     await this.repository.insert(ClientMapper.fromDomainToEntity(client));
@@ -105,13 +93,14 @@ export class ClientRepositoryTypeORM implements ClientRepository {
     return ClientMapper.fromEntityToDomain(saved);
   }
 
-  async deleteWithFinishedRentals(clientId: UUID): Promise<boolean> {
-    const today = businessToday();
-
+  async deleteWithFinishedRentals(
+    clientId: UUID,
+    today: Date,
+  ): Promise<boolean> {
     return this.manager.transaction(async (manager) => {
       await manager.delete(RentalEntity, {
         clientId,
-        checkOutDate: LessThan(today),
+        checkOutDate: LessThan(RentalMapper.toDateColumn(today)),
       });
 
       const result = await manager.delete(ClientEntity, { id: clientId });

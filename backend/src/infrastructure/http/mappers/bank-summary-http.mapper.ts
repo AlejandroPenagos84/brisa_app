@@ -1,5 +1,5 @@
 import { Bank } from '@/domain/bank.js';
-import { BankSummaryResponse } from '../dto/response/bank-summary.response.js';
+import { BankSummaryResponse } from '@/infrastructure/http/dto/response/bank-summary.response.js';
 
 export class BankSummaryHttpMapper {
   static fromDomainToResponse(bank: Bank): BankSummaryResponse {

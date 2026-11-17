@@ -1,11 +1,10 @@
-import { businessToday } from '@/infrastructure/time/business-date.js';
 import { NotFoundError } from '@/application/errors/application-error.js';
-import { EntityManager, Repository } from 'typeorm';
+import { EntityManager, In, MoreThanOrEqual, Repository } from 'typeorm';
 import { RentalRepository } from '@/application/ports/out/repositories/rental-repository.js';
 import { Rental, RentalKey } from '@/domain/rental.js';
 import { RentalEntity } from '@/infrastructure/persistence/entities/rental.entity.js';
 import { RentalMapper } from '@/infrastructure/persistence/mapper/rental-mapper.js';
-import { UUID } from '@/utils/types.js';
+import type { UUID } from '@/utils/types.js';
 
 export class RentalRepositoryTypeORM implements RentalRepository {
   private readonly repository: Repository<RentalEntity>;
@@ -40,46 +39,37 @@ export class RentalRepositoryTypeORM implements RentalRepository {
     return entity ? RentalMapper.fromEntityToDomain(entity) : null;
   }
 
-  async hasOverlappingPropertyRental(
+  // Only filters what is needed; the overlap rule lives in the domain
+  async findCurrentByPropertyId(
     propertyId: UUID,
-    startDate: Date,
-    endDate: Date,
-  ): Promise<boolean> {
-    const today = businessToday();
-    const count = await this.repository
-      .createQueryBuilder('rental')
-      .where('rental.propertyId = :propertyId', { propertyId })
-      .andWhere('rental.checkInDate <= :endDate', {
-        endDate: RentalMapper.toDateColumn(endDate),
-      })
-      .andWhere('rental.checkOutDate >= :startDate', {
-        startDate: RentalMapper.toDateColumn(startDate),
-      })
-      .andWhere('rental.checkOutDate >= :today', { today })
-      .getCount();
-
-    return count > 0;
+    today: Date,
+  ): Promise<Rental[]> {
+    const entities = await this.repository.findBy({
+      propertyId,
+      checkOutDate: MoreThanOrEqual(RentalMapper.toDateColumn(today)),
+    });
+    return entities.map((entity) => RentalMapper.fromEntityToDomain(entity));
   }
 
-  async hasOverlappingClientRental(
-    clientId: UUID,
-    startDate: Date,
-    endDate: Date,
-  ): Promise<boolean> {
-    const today = businessToday();
-    const count = await this.repository
-      .createQueryBuilder('rental')
-      .where('rental.clientId = :clientId', { clientId })
-      .andWhere('rental.checkInDate <= :endDate', {
-        endDate: RentalMapper.toDateColumn(endDate),
-      })
-      .andWhere('rental.checkOutDate >= :startDate', {
-        startDate: RentalMapper.toDateColumn(startDate),
-      })
-      .andWhere('rental.checkOutDate >= :today', { today })
-      .getCount();
+  async findCurrentByClientId(clientId: UUID, today: Date): Promise<Rental[]> {
+    const entities = await this.repository.findBy({
+      clientId,
+      checkOutDate: MoreThanOrEqual(RentalMapper.toDateColumn(today)),
+    });
+    return entities.map((entity) => RentalMapper.fromEntityToDomain(entity));
+  }
 
-    return count > 0;
+  async findCurrentByPropertyIds(
+    propertyIds: UUID[],
+    today: Date,
+  ): Promise<Rental[]> {
+    if (propertyIds.length === 0) return [];
+
+    const entities = await this.repository.findBy({
+      propertyId: In(propertyIds),
+      checkOutDate: MoreThanOrEqual(RentalMapper.toDateColumn(today)),
+    });
+    return entities.map((entity) => RentalMapper.fromEntityToDomain(entity));
   }
 
   async updateStatuses(rentals: Rental[]): Promise<void> {

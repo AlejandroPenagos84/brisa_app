@@ -3,7 +3,7 @@ import { BankRepository } from '@/application/ports/out/repositories/bank-reposi
 import { Bank } from '@/domain/bank.js';
 import { BankEntity } from '@/infrastructure/persistence/entities/bank.entity.js';
 import { BankMapper } from '@/infrastructure/persistence/mapper/bank-mapper.js';
-import { UUID } from '@/utils/types.js';
+import type { UUID } from '@/utils/types.js';
 
 export class BankRepositoryTypeORM implements BankRepository {
   private readonly repository: Repository<BankEntity>;

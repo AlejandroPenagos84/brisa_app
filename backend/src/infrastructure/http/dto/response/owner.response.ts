@@ -32,7 +32,20 @@ export class OwnerResponse {
 
   @ApiPropertyOptional({
     description:
-      'Owner balance. Only included in /owners responses, not inside properties.',
+      'Owner bank account number. Only included in /owners responses.',
+    example: '5001001001',
+  })
+  accountNumber?: string;
+
+  @ApiPropertyOptional({
+    description: 'Owner bank account type. Only included in /owners responses.',
+    example: 'Ahorros',
+  })
+  accountType?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Owner balance: net amount (90%) of the rentals. Only included in /owners responses, not inside properties.',
     example: 1500.5,
   })
   balance?: number;

@@ -10,10 +10,8 @@ import {
 import { ClientEntity } from '@/infrastructure/persistence/entities/client.entity.js';
 import { CountryEntity } from '@/infrastructure/persistence/entities/country.entity.js';
 import { OwnerEntity } from '@/infrastructure/persistence/entities/owner.entity.js';
-import { Injectable } from '@nestjs/common/decorators/core/index.js';
 
 @Entity({ name: 'banks' })
-@Injectable()
 export class BankEntity {
   @PrimaryColumn({ name: 'id', type: 'varchar', length: 36 })
   id: string;

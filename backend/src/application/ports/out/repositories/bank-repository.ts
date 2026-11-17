@@ -1,5 +1,5 @@
 import { Bank } from '@/domain/bank.js';
-import { UUID } from '@/utils/types.js';
+import type { UUID } from '@/utils/types.js';
 
 export const BANK_REPOSITORY = Symbol('BankRepository');
 

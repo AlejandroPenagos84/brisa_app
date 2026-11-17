@@ -22,17 +22,26 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { RentalService } from '@/application/services/rental-service.js';
-import { CreateRentalRequest } from '../dto/request/create/create-rental.request.js';
+import { CancelRentalUseCase } from '@/application/use-cases/cancel-rental.use-case.js';
+import { ReservePropertyUseCase } from '@/application/use-cases/reserve-property.use-case.js';
+import { CreateRentalRequest } from '@/infrastructure/http/dto/request/create/create-rental.request.js';
 import {
   RentalResponse,
   RentalDetailsResponse,
-} from '../dto/response/rental.response.js';
-import { RentalHttpMapper } from '../mappers/rental-http.mapper.js';
+} from '@/infrastructure/http/dto/response/rental.response.js';
+import { RentalHttpMapper } from '@/infrastructure/http/mappers/rental-http.mapper.js';
 
+// The client is part of the rental key, so cancelling another client's
+// rental simply does not find it. Without login the client id is trusted:
+// the app only runs on localhost.
 @ApiTags('Rentals')
 @Controller('rentals')
 export class RentalController {
-  constructor(private readonly rentalService: RentalService) {}
+  constructor(
+    private readonly rentalService: RentalService,
+    private readonly reserveProperty: ReservePropertyUseCase,
+    private readonly cancelRental: CancelRentalUseCase,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'List rentals, optionally filtered by client' })
@@ -53,9 +62,7 @@ export class RentalController {
       ? await this.rentalService.findByClientId(clientId)
       : await this.rentalService.findAll();
 
-    return rentals.map((item) =>
-      RentalHttpMapper.fromDetailsToResponse(item),
-    );
+    return rentals.map((item) => RentalHttpMapper.fromDetailsToResponse(item));
   }
 
   @Get('client/:clientId')
@@ -74,9 +81,7 @@ export class RentalController {
   ): Promise<RentalDetailsResponse[]> {
     const rentals = await this.rentalService.findByClientId(clientId);
 
-    return rentals.map((item) =>
-      RentalHttpMapper.fromDetailsToResponse(item),
-    );
+    return rentals.map((item) => RentalHttpMapper.fromDetailsToResponse(item));
   }
 
   @Get(':propertyId/:clientId/:startDate')
@@ -122,7 +127,8 @@ export class RentalController {
 
   @Delete(':propertyId/:clientId/:startDate')
   @ApiOperation({
-    summary: 'Cancel a rental: the owner refunds the charged amount to the client',
+    summary:
+      'Cancel a rental: the client recovers the whole cost (owner net amount + administrator commission)',
   })
   @ApiParam({
     name: 'propertyId',
@@ -140,38 +146,35 @@ export class RentalController {
     example: '2026-11-10',
     format: 'date',
   })
-  @ApiOkResponse({
-    description: 'Rental cancelled and charged amount refunded',
-  })
+  @ApiOkResponse({ description: 'Rental cancelled and cost refunded' })
   @ApiNotFoundResponse({ description: 'Rental not found' })
   @ApiConflictResponse({
     description:
-      'The rental has already started, has no charged amount, or the owner balance is not enough to refund it',
+      'The rental has already started, has no cost, or the owner or administrator balance is not enough to refund it',
   })
   async cancel(
     @Param('propertyId', ParseUUIDPipe) propertyId: string,
     @Param('clientId', ParseUUIDPipe) clientId: string,
     @Param('startDate', new ParseDatePipe()) startDate: Date,
   ): Promise<void> {
-    await this.rentalService.cancel({ propertyId, clientId, startDate });
+    await this.cancelRental.execute({ propertyId, clientId, startDate });
   }
 
   @Post()
   @ApiOperation({
-    summary: 'Create a rental: the client pays and the owner receives the amount',
+    summary:
+      'Reserve a property (reservarInmueble): the client pays, the administrator keeps 10% and the owner receives 90%',
   })
   @ApiCreatedResponse({ description: 'Rental created', type: RentalResponse })
-  @ApiBadRequestResponse({
-    description: 'Invalid rental dates or data',
-  })
+  @ApiBadRequestResponse({ description: 'Invalid rental dates or data' })
   @ApiNotFoundResponse({ description: 'Client or property not found' })
   @ApiConflictResponse({
     description:
-      'The rental already exists, the property is inactive, the dates overlap, the client has insufficient balance, or the owner balance would exceed the maximum',
+      'The property is not available for the dates, the client has an overlapping rental or insufficient balance, or a balance would exceed the maximum',
   })
   async create(@Body() request: CreateRentalRequest): Promise<RentalResponse> {
-    const rental = RentalHttpMapper.fromCreateRequestToDomain(request);
-    const saved = await this.rentalService.save(rental);
-    return RentalHttpMapper.fromDomainToResponse(saved);
+    const command = RentalHttpMapper.fromCreateRequestToCommand(request);
+    const rental = await this.reserveProperty.execute(command);
+    return RentalHttpMapper.fromDomainToResponse(rental);
   }
 }

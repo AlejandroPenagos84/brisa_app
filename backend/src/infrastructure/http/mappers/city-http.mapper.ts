@@ -3,7 +3,7 @@ import type { CityDetails } from '@/application/models/city-details.js';
 import {
   CityResponse,
   CityDetailsResponse,
-} from '../dto/response/city.response.js';
+} from '@/infrastructure/http/dto/response/city.response.js';
 import { CountryHttpMapper } from './country-http.mapper.js';
 
 export class CityHttpMapper {

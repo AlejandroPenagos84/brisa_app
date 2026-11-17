@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { entities } from '../infrastructure/persistence/entities/index.js';
+import { entities } from '@/infrastructure/persistence/entities/index.js';
 
 @Module({
   imports: [

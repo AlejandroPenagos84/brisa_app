@@ -10,6 +10,7 @@ export class CreateRentalRequest {
   @IsUUID()
   propertyId: string;
 
+  // The client making the reservation: it pays with its own balance
   @ApiProperty({
     description: 'Identifier of the client renting the property',
     example: '3fa85f64-5717-4562-b3fc-2c963f66afa6',

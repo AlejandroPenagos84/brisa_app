@@ -20,7 +20,8 @@ export class RentalMapper {
     entity.clientId = data.clientId;
     entity.checkInDate = RentalMapper.toDateColumn(data.startDate);
     entity.checkOutDate = RentalMapper.toDateColumn(data.endDate);
-    entity.chargedAmount = rental.getChargedAmount();
+    // The domain calls it cost; the column keeps its name charged_amount
+    entity.chargedAmount = data.cost;
     entity.status = rental.getStatus();
     return entity;
   }

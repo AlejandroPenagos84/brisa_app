@@ -3,7 +3,7 @@ import { CountryRepository } from '@/application/ports/out/repositories/country-
 import { Country } from '@/domain/country.js';
 import { CountryEntity } from '@/infrastructure/persistence/entities/country.entity.js';
 import { CountryMapper } from '@/infrastructure/persistence/mapper/country-mapper.js';
-import { UUID } from '@/utils/types.js';
+import type { UUID } from '@/utils/types.js';
 
 export class CountryRepositoryTypeORM implements CountryRepository {
   private readonly repository: Repository<CountryEntity>;

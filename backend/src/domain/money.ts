@@ -77,3 +77,45 @@ export function subtractFromBalance(balance: number, amount: number): number {
 export function isBalanceEnough(balance: number, amount: number): boolean {
   return toCents(amount) <= toCents(balance);
 }
+
+// amount × times, computed in cents (e.g. price per night × nights)
+export function multiplyAmount(amount: number, times: number): number {
+  assertValidAmount(amount);
+  if (!Number.isInteger(times) || times <= 0) {
+    throw new DomainError(
+      DomainErrorCode.INVALID_AMOUNT,
+      'The multiplier must be a positive integer',
+    );
+  }
+
+  return fromCents(toCents(amount) * times);
+}
+
+export interface AmountSplit {
+  // amount × rate, rounded to the nearest cent
+  part: number;
+  // amount − part, so part + rest is always exactly amount
+  rest: number;
+}
+
+export function splitByRate(amount: number, rate: number): AmountSplit {
+  assertValidAmount(amount);
+  if (!Number.isFinite(rate) || rate < 0 || rate > 1) {
+    throw new DomainError(DomainErrorCode.INVALID_AMOUNT, 'The rate is not valid');
+  }
+
+  const totalInCents = toCents(amount);
+  const partInCents = Math.round(totalInCents * rate);
+  return {
+    part: fromCents(partInCents),
+    rest: fromCents(totalInCents - partInCents),
+  };
+}
+
+export function sumAmounts(a: number, b: number): number {
+  return fromCents(toCents(a) + toCents(b));
+}
+
+export function isSameAmount(a: number, b: number): boolean {
+  return toCents(a) === toCents(b);
+}

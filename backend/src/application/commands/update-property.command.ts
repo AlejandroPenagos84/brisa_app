@@ -5,6 +5,6 @@ export interface UpdatePropertyCommand {
   area?: number;
   numberOfRooms?: number;
   capacity?: number;
-  price?: number;
+  pricePerNight?: number;
   status?: PropertyStatus;
 }

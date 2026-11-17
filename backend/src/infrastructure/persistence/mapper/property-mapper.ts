@@ -26,7 +26,7 @@ export class PropertyMapper {
     entity.area = data.area;
     entity.numberOfRooms = data.numberOfRooms;
     entity.capacity = data.capacity;
-    entity.pricePerNight = data.price;
+    entity.pricePerNight = data.pricePerNight;
     entity.manuallyInactive = property.isManuallyInactive();
     return entity;
   }

@@ -6,4 +6,8 @@ export class BusinessClock implements Clock {
   today(): Date {
     return businessTodayAsDate();
   }
+
+  now(): Date {
+    return new Date();
+  }
 }

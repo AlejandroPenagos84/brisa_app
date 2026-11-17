@@ -1,5 +1,5 @@
 import { Country } from '@/domain/country.js';
-import { UUID } from '@/utils/types.js';
+import type { UUID } from '@/utils/types.js';
 
 export const COUNTRY_REPOSITORY = Symbol('CountryRepository');
 

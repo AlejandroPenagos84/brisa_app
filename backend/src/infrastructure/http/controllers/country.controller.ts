@@ -13,8 +13,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CountryService } from '@/application/services/country-service.js';
-import { CountryResponse } from '../dto/response/country.response.js';
-import { CountryHttpMapper } from '../mappers/country-http.mapper.js';
+import { CountryResponse } from '@/infrastructure/http/dto/response/country.response.js';
+import { CountryHttpMapper } from '@/infrastructure/http/mappers/country-http.mapper.js';
 
 @ApiTags('Countries')
 @Controller('countries')

@@ -3,7 +3,7 @@ import { CityRepository } from '@/application/ports/out/repositories/city-reposi
 import { City } from '@/domain/city.js';
 import { CityEntity } from '@/infrastructure/persistence/entities/city.entity.js';
 import { CityMapper } from '@/infrastructure/persistence/mapper/city-mapper.js';
-import { UUID } from '@/utils/types.js';
+import type { UUID } from '@/utils/types.js';
 
 export class CityRepositoryTypeORM implements CityRepository {
   private readonly repository: Repository<CityEntity>;

@@ -4,7 +4,7 @@ import { OwnerRepository } from '@/application/ports/out/repositories/owner-repo
 import { Owner } from '@/domain/owner.js';
 import { OwnerEntity } from '@/infrastructure/persistence/entities/owner.entity.js';
 import { OwnerMapper } from '@/infrastructure/persistence/mapper/owner-mapper.js';
-import { UUID } from '@/utils/types.js';
+import type { UUID } from '@/utils/types.js';
 
 export class OwnerRepositoryTypeORM implements OwnerRepository {
   private readonly repository: Repository<OwnerEntity>;
@@ -51,13 +51,21 @@ export class OwnerRepositoryTypeORM implements OwnerRepository {
     return count > 0;
   }
 
-  async hasProperties(ownerId: UUID): Promise<boolean> {
-    const count = await this.repository
+  async existsByBankAccount(
+    bankId: UUID,
+    accountNumber: string,
+    excludeId?: UUID,
+  ): Promise<boolean> {
+    const query = this.repository
       .createQueryBuilder('owner')
-      .innerJoin('owner.properties', 'property')
-      .where('owner.id = :ownerId', { ownerId })
-      .getCount();
+      .where('owner.bankId = :bankId', { bankId })
+      .andWhere('owner.accountNumber = :accountNumber', { accountNumber });
 
+    if (excludeId !== undefined) {
+      query.andWhere('owner.id != :excludeId', { excludeId });
+    }
+
+    const count = await query.getCount();
     return count > 0;
   }
 

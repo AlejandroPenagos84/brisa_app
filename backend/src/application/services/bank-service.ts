@@ -1,8 +1,8 @@
 import { Bank } from '@/domain/bank.js';
-import { UUID } from '@/utils/types.js';
-import type { BankDetails } from '../models/bank-details.js';
-import type { BankRepository } from '../ports/out/repositories/bank-repository.js';
-import type { CountryRepository } from '../ports/out/repositories/country-repository.js';
+import type { UUID } from '@/utils/types.js';
+import type { BankDetails } from '@/application/models/bank-details.js';
+import type { BankRepository } from '@/application/ports/out/repositories/bank-repository.js';
+import type { CountryRepository } from '@/application/ports/out/repositories/country-repository.js';
 
 // Plain class: bank.module.ts builds it with useFactory, so the
 // application layer does not depend on Nest

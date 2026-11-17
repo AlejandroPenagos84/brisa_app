@@ -13,8 +13,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CityService } from '@/application/services/city-service.js';
-import { CityDetailsResponse } from '../dto/response/city.response.js';
-import { CityHttpMapper } from '../mappers/city-http.mapper.js';
+import { CityDetailsResponse } from '@/infrastructure/http/dto/response/city.response.js';
+import { CityHttpMapper } from '@/infrastructure/http/mappers/city-http.mapper.js';
 
 @ApiTags('Cities')
 @Controller('cities')

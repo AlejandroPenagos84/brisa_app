@@ -2,15 +2,15 @@ import type { CreatePropertyCommand } from '@/application/commands/create-proper
 import type { PropertyDetails } from '@/application/models/property-details.js';
 import type { UpdatePropertyCommand } from '@/application/commands/update-property.command.js';
 import { Property } from '@/domain/property.js';
-import { CreatePropertyRequest } from '../dto/request/create/create-property.request.js';
+import { CreatePropertyRequest } from '@/infrastructure/http/dto/request/create/create-property.request.js';
 import {
   PropertyResponse,
   PropertyDetailsResponse,
-} from '../dto/response/property.response.js';
-import { UpdatePropertyRequest } from '../dto/request/update/update-property.request.js';
-import { trimText } from './mapping.utils.js';
+} from '@/infrastructure/http/dto/response/property.response.js';
+import { UpdatePropertyRequest } from '@/infrastructure/http/dto/request/update/update-property.request.js';
 import { OwnerHttpMapper } from './owner-http.mapper.js';
 
+// The API keeps the field "price"; the domain calls it pricePerNight
 export class PropertyHttpMapper {
   static fromCreateRequestToCommand(
     request: CreatePropertyRequest,
@@ -18,11 +18,11 @@ export class PropertyHttpMapper {
     return {
       ownerId: request.ownerId,
       cityId: request.cityId,
-      address: trimText(request.address),
+      address: request.address,
       area: request.area,
       numberOfRooms: request.numberOfRooms,
       capacity: request.capacity,
-      price: request.price,
+      pricePerNight: request.price,
     };
   }
 
@@ -30,11 +30,11 @@ export class PropertyHttpMapper {
     request: UpdatePropertyRequest,
   ): UpdatePropertyCommand {
     return {
-      address: trimText(request.address),
+      address: request.address,
       area: request.area,
       numberOfRooms: request.numberOfRooms,
       capacity: request.capacity,
-      price: request.price,
+      pricePerNight: request.price,
       status: request.status,
     };
   }
@@ -49,7 +49,7 @@ export class PropertyHttpMapper {
       area: data.area,
       numberOfRooms: data.numberOfRooms,
       capacity: data.capacity,
-      price: data.price,
+      price: data.pricePerNight,
       status: data.status,
     };
   }
@@ -60,7 +60,10 @@ export class PropertyHttpMapper {
     const { property, owner, ownerBank, city } = details;
     return {
       ...this.fromDomainToResponse(property),
-      owner: OwnerHttpMapper.fromDomainWithBankToPublicResponse(owner, ownerBank),
+      owner: OwnerHttpMapper.fromDomainWithBankToPublicResponse(
+        owner,
+        ownerBank,
+      ),
       city: { id: city.getId(), name: city.getName() },
     };
   }

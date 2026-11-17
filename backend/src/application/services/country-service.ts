@@ -1,5 +1,5 @@
 import { Country } from '@/domain/country.js';
-import { UUID } from '@/utils/types.js';
+import type { UUID } from '@/utils/types.js';
 import type { CountryRepository } from '@/application/ports/out/repositories/country-repository.js';
 
 // Plain class: country.module.ts builds it with useFactory, so the

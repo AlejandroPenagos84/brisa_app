@@ -13,8 +13,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { BankService } from '@/application/services/bank-service.js';
-import { BankDetailsResponse } from '../dto/response/bank.response.js';
-import { BankHttpMapper } from '../mappers/bank-http.mapper.js';
+import { BankDetailsResponse } from '@/infrastructure/http/dto/response/bank.response.js';
+import { BankHttpMapper } from '@/infrastructure/http/mappers/bank-http.mapper.js';
 
 @ApiTags('Banks')
 @Controller('banks')

@@ -13,7 +13,7 @@ import {
 
 export class CreatePropertyRequest {
   @ApiProperty({
-    description: 'Identifier of the property owner',
+    description: 'Identifier of the owner adding the property',
     example: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
     format: 'uuid',
   })
@@ -72,7 +72,7 @@ export class CreatePropertyRequest {
   capacity: number;
 
   @ApiProperty({
-    description: 'Monthly rental price',
+    description: 'Price per night',
     example: 1500.5,
     minimum: 0.01,
     maximum: 9_999_999_999.99,

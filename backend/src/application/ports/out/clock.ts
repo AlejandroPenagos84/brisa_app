@@ -6,4 +6,6 @@ export interface Clock {
   // Current business day at UTC midnight, the same representation as the
   // rental start and end dates
   today(): Date;
+  // Current instant, for the date of the transactions
+  now(): Date;
 }

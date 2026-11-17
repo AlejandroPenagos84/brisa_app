@@ -4,28 +4,17 @@ import {
   NotFoundError,
 } from '@/application/errors/application-error.js';
 import { Client } from '@/domain/client.js';
-import { UUID } from '@/utils/types.js';
-import type { CreateClientCommand } from '../commands/create-client.command.js';
-import type { UpdateClientCommand } from '../commands/update-client.command.js';
-import type { ClientDetails } from '../models/client-details.js';
-import type { UnitOfWork } from '../ports/out/repositories/unit-of-work.js';
-import type { BankRepository } from '../ports/out/repositories/bank-repository.js';
-import type { CityRepository } from '../ports/out/repositories/city-repository.js';
-import type { ClientRepository } from '../ports/out/repositories/client-repository.js';
-import type { CountryRepository } from '../ports/out/repositories/country-repository.js';
+import type { UUID } from '@/utils/types.js';
+import type { CreateClientCommand } from '@/application/commands/create-client.command.js';
+import type { ClientDetails } from '@/application/models/client-details.js';
+import type { Clock } from '@/application/ports/out/clock.js';
+import type { UnitOfWork } from '@/application/ports/out/repositories/unit-of-work.js';
+import type { BankRepository } from '@/application/ports/out/repositories/bank-repository.js';
+import type { CityRepository } from '@/application/ports/out/repositories/city-repository.js';
+import type { ClientRepository } from '@/application/ports/out/repositories/client-repository.js';
+import type { CountryRepository } from '@/application/ports/out/repositories/country-repository.js';
 
-interface NormalizedClientInput {
-  email: string;
-  accountNumber: string;
-}
-
-interface ClientUpdateValues {
-  email?: string;
-  bankId: UUID;
-  accountNumber: string;
-  bankAccountChanged: boolean;
-}
-
+// Updating is UpdateClientUseCase.
 // Plain class: client.module.ts builds it with useFactory, so the
 // application layer does not depend on Nest
 export class ClientService {
@@ -35,6 +24,7 @@ export class ClientService {
     private readonly bankRepository: BankRepository,
     private readonly countryRepository: CountryRepository,
     private readonly unitOfWork: UnitOfWork,
+    private readonly clock: Clock,
   ) {}
 
   async findByIds(ids: UUID[]): Promise<Client[]> {
@@ -84,48 +74,36 @@ export class ClientService {
   }
 
   async create(command: CreateClientCommand): Promise<Client> {
-    const { email, accountNumber } = await this.validateCreate(command);
-
+    // The domain validates and normalizes (email in lower case, trimmed
+    // account); uniqueness is checked with the normalized values
     const client = new Client(
       randomUUID(),
       command.name,
       command.phone,
-      email,
+      command.email,
       command.cityId,
       command.bankId,
-      accountNumber,
+      command.accountNumber,
       command.accountType,
       command.balance,
     );
 
-    return this.clientRepository.save(client);
-  }
-
-  private async validateCreate(
-    command: CreateClientCommand,
-  ): Promise<NormalizedClientInput> {
-    const email = command.email.trim().toLowerCase();
-    const accountNumber = command.accountNumber.trim();
     const [city, bank, emailExists, accountExists] = await Promise.all([
-      this.cityRepository.findById(command.cityId),
-      this.bankRepository.findById(command.bankId),
-      this.clientRepository.existsByEmail(email),
+      this.cityRepository.findById(client.getCityId()),
+      this.bankRepository.findById(client.getBankId()),
+      this.clientRepository.existsByEmail(client.getEmail()),
       this.clientRepository.existsByBankAccount(
-        command.bankId,
-        accountNumber,
+        client.getBankId(),
+        client.getAccountNumber(),
       ),
     ]);
 
     if (!city) {
-      throw new NotFoundError(
-        `City with id ${command.cityId} not found`,
-      );
+      throw new NotFoundError(`City with id ${command.cityId} not found`);
     }
 
     if (!bank) {
-      throw new NotFoundError(
-        `Bank with id ${command.bankId} not found`,
-      );
+      throw new NotFoundError(`Bank with id ${command.bankId} not found`);
     }
 
     if (emailExists) {
@@ -133,116 +111,10 @@ export class ClientService {
     }
 
     if (accountExists) {
-      throw new ConflictError(
-        'The bank account is already registered',
-      );
+      throw new ConflictError('The bank account is already registered');
     }
 
-    return { email, accountNumber };
-  }
-
-  async update(id: UUID, command: UpdateClientCommand): Promise<Client> {
-    const client = await this.getClientOrThrow(id);
-
-    await this.validateUpdateRelations(command);
-    const values = await this.validateUpdateUniqueness(id, client, command);
-    this.applyUpdateChanges(client, command, values);
-
-    return this.clientRepository.update(id, client);
-  }
-
-  private async validateUpdateRelations(
-    command: UpdateClientCommand,
-  ): Promise<void> {
-    if (command.cityId !== undefined) {
-      const city = await this.cityRepository.findById(command.cityId);
-      if (!city) {
-        throw new NotFoundError(
-          `City with id ${command.cityId} not found`,
-        );
-      }
-    }
-
-    if (command.bankId !== undefined) {
-      const bank = await this.bankRepository.findById(command.bankId);
-      if (!bank) {
-        throw new NotFoundError(
-          `Bank with id ${command.bankId} not found`,
-        );
-      }
-    }
-  }
-
-  private async validateUpdateUniqueness(
-    id: UUID,
-    client: Client,
-    command: UpdateClientCommand,
-  ): Promise<ClientUpdateValues> {
-    const email =
-      command.email !== undefined
-        ? command.email.trim().toLowerCase()
-        : undefined;
-    const bankId = command.bankId ?? client.getBankId();
-    const accountNumber =
-      command.accountNumber !== undefined
-        ? command.accountNumber.trim()
-        : client.getAccountNumber();
-    const bankAccountChanged =
-      command.bankId !== undefined ||
-      command.accountNumber !== undefined ||
-      command.accountType !== undefined;
-
-    const [emailExists, accountExists] = await Promise.all([
-      email !== undefined
-        ? this.clientRepository.existsByEmail(email, id)
-        : Promise.resolve(false),
-      command.bankId !== undefined || command.accountNumber !== undefined
-        ? this.clientRepository.existsByBankAccount(
-            bankId,
-            accountNumber,
-            id,
-          )
-        : Promise.resolve(false),
-    ]);
-
-    if (emailExists) {
-      throw new ConflictError('The email is already registered');
-    }
-
-    if (accountExists) {
-      throw new ConflictError(
-        'The bank account is already registered',
-      );
-    }
-
-    return { email, bankId, accountNumber, bankAccountChanged };
-  }
-
-  private applyUpdateChanges(
-    client: Client,
-    command: UpdateClientCommand,
-    values: ClientUpdateValues,
-  ): void {
-    if (command.name !== undefined) {
-      client.changeName(command.name);
-    }
-    if (command.phone !== undefined) {
-      client.changePhone(command.phone);
-    }
-    if (values.email !== undefined) {
-      client.changeEmail(values.email);
-    }
-    if (command.cityId !== undefined) {
-      client.changeCityId(command.cityId);
-    }
-
-    if (values.bankAccountChanged) {
-      client.changeBankAccount(
-        values.bankId,
-        values.accountNumber,
-        command.accountType ?? client.getAccountType(),
-      );
-    }
+    return this.clientRepository.save(client);
   }
 
   async deposit(id: UUID, amount: number): Promise<Client> {
@@ -258,27 +130,33 @@ export class ClientService {
     return this.unitOfWork.run(async ({ clientsRepository }) => {
       const client = await clientsRepository.findByIdForUpdate(id);
       if (!client) throw new NotFoundError(`Client with id ${id} not found`);
-      client.discount(amount);
+      client.withdraw(amount);
       return clientsRepository.update(id, client);
     });
   }
 
-  async delete(id: UUID): Promise<boolean> {
-    if (await this.clientRepository.hasActiveRentals(id)) {
-      throw new ConflictError(
-        `Client with id ${id} has active or upcoming rentals`,
-      );
-    }
+  // The domain rejects it if the client has current rentals. The client is
+  // locked, so no rental can be booked while it is deleted.
+  async delete(id: UUID): Promise<void> {
+    const today = this.clock.today();
 
-    return this.clientRepository.deleteWithFinishedRentals(id);
+    await this.unitOfWork.run(
+      async ({ clientsRepository, rentalsRepository }) => {
+        const client = await clientsRepository.findByIdForUpdate(id);
+        if (!client) throw new NotFoundError(`Client with id ${id} not found`);
+
+        const currentRentals = await rentalsRepository.findCurrentByClientId(
+          id,
+          today,
+        );
+        client.assertCanBeDeleted(currentRentals);
+
+        const deleted = await clientsRepository.deleteWithFinishedRentals(
+          id,
+          today,
+        );
+        if (!deleted) throw new NotFoundError(`Client with id ${id} not found`);
+      },
+    );
   }
-
-  private async getClientOrThrow(id: UUID): Promise<Client> {
-    const client = await this.clientRepository.findById(id);
-    if (!client) {
-      throw new NotFoundError(`Client with id ${id} not found`);
-    }
-    return client;
-  }
-
 }

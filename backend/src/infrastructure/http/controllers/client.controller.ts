@@ -21,19 +21,23 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ClientService } from '@/application/services/client-service.js';
-import { CreateClientRequest } from '../dto/request/create/create-client.request.js';
-import { UpdateClientRequest } from '../dto/request/update/update-client.request.js';
-import { AmountRequest } from '../dto/request/update/amount.request.js';
+import { UpdateClientUseCase } from '@/application/use-cases/update-client.use-case.js';
+import { CreateClientRequest } from '@/infrastructure/http/dto/request/create/create-client.request.js';
+import { UpdateClientRequest } from '@/infrastructure/http/dto/request/update/update-client.request.js';
+import { AmountRequest } from '@/infrastructure/http/dto/request/update/amount.request.js';
 import {
   ClientResponse,
   ClientDetailsResponse,
-} from '../dto/response/client.response.js';
-import { ClientHttpMapper } from '../mappers/client-http.mapper.js';
+} from '@/infrastructure/http/dto/response/client.response.js';
+import { ClientHttpMapper } from '@/infrastructure/http/mappers/client-http.mapper.js';
 
 @ApiTags('Clients')
 @Controller('clients')
 export class ClientController {
-  constructor(private readonly clientService: ClientService) {}
+  constructor(
+    private readonly clientService: ClientService,
+    private readonly updateClient: UpdateClientUseCase,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'List clients with their bank and country' })
@@ -72,9 +76,7 @@ export class ClientController {
   @ApiConflictResponse({
     description: 'Email or bank account already registered',
   })
-  async create(
-    @Body() request: CreateClientRequest,
-  ): Promise<ClientResponse> {
+  async create(@Body() request: CreateClientRequest): Promise<ClientResponse> {
     const command = ClientHttpMapper.fromCreateRequestToCommand(request);
     const saved = await this.clientService.create(command);
     return ClientHttpMapper.fromDomainToBasicResponse(saved);
@@ -94,7 +96,7 @@ export class ClientController {
     @Body() request: UpdateClientRequest,
   ): Promise<ClientResponse> {
     const command = ClientHttpMapper.fromUpdateRequestToCommand(request);
-    const updated = await this.clientService.update(id, command);
+    const updated = await this.updateClient.execute(id, command);
     return ClientHttpMapper.fromDomainToBasicResponse(updated);
   }
 
@@ -147,9 +149,6 @@ export class ClientController {
     description: 'Client has active or upcoming rentals',
   })
   async delete(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
-    const deleted = await this.clientService.delete(id);
-    if (!deleted) {
-      throw new NotFoundException(`Client with id ${id} not found`);
-    }
+    await this.clientService.delete(id);
   }
 }

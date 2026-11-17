@@ -1,5 +1,5 @@
 import { Country } from '@/domain/country.js';
-import { CountryResponse } from '../dto/response/country.response.js';
+import { CountryResponse } from '@/infrastructure/http/dto/response/country.response.js';
 
 export class CountryHttpMapper {
   static fromDomainToResponse(country: Country): CountryResponse {

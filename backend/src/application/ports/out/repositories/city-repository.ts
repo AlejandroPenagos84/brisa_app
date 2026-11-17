@@ -1,5 +1,5 @@
 import { City } from '@/domain/city.js';
-import { UUID } from '@/utils/types.js';
+import type { UUID } from '@/utils/types.js';
 
 export const CITY_REPOSITORY = Symbol('CityRepository');
 
