@@ -1,4 +1,3 @@
-import { businessToday } from '@/infrastructure/time/business-date.js';
 import { NotFoundError } from '@/application/errors/application-error.js';
 import {
   Between,
@@ -19,6 +18,7 @@ import { Property } from '@/domain/property.js';
 import { PropertyEntity } from '@/infrastructure/persistence/entities/property.entity.js';
 import { RentalEntity } from '@/infrastructure/persistence/entities/rental.entity.js';
 import { PropertyMapper } from '@/infrastructure/persistence/mapper/property-mapper.js';
+import { RentalMapper } from '@/infrastructure/persistence/mapper/rental-mapper.js';
 import { UUID } from '@/utils/types.js';
 
 function priceRange(
@@ -55,6 +55,14 @@ export class PropertyRepositoryTypeORM implements PropertyRepository {
     return entity ? PropertyMapper.fromEntityToDomain(entity) : null;
   }
 
+  async findByIdForUpdate(id: UUID): Promise<Property | null> {
+    const entity = await this.repository.findOne({
+      where: { id },
+      lock: { mode: 'pessimistic_write' }, // SELECT ... FOR UPDATE
+    });
+    return entity ? PropertyMapper.fromEntityToDomain(entity) : null;
+  }
+
   async findByOwnerId(ownerId: UUID): Promise<Property[]> {
     const entities = await this.repository.findBy({ ownerId });
     return entities.map((entity) => PropertyMapper.fromEntityToDomain(entity));
@@ -75,32 +83,24 @@ export class PropertyRepositoryTypeORM implements PropertyRepository {
     return entities.map((entity) => PropertyMapper.fromEntityToDomain(entity));
   }
 
-  async findOccupiedPropertyIds(propertyIds: UUID[]): Promise<UUID[]> {
+  async findOccupiedPropertyIds(
+    propertyIds: UUID[],
+    today: Date,
+  ): Promise<UUID[]> {
     if (propertyIds.length === 0) return [];
 
-    const today = businessToday();
     const rows = await this.repository
       .createQueryBuilder('property')
       .innerJoin('property.rentals', 'rental')
       .select('property.id', 'id')
       .where('property.id IN (:...propertyIds)', { propertyIds })
-      .andWhere('rental.checkOutDate >= :today', { today })
+      .andWhere('rental.checkOutDate >= :today', {
+        today: RentalMapper.toDateColumn(today),
+      })
       .distinct(true)
       .getRawMany<{ id: string }>();
 
     return rows.map((row) => row.id);
-  }
-
-  async hasActiveRentals(propertyId: UUID): Promise<boolean> {
-    const today = businessToday();
-    const count = await this.repository
-      .createQueryBuilder('property')
-      .innerJoin('property.rentals', 'rental')
-      .where('property.id = :propertyId', { propertyId })
-      .andWhere('rental.checkOutDate >= :today', { today })
-      .getCount();
-
-    return count > 0;
   }
 
   async save(property: Property): Promise<Property> {
@@ -124,13 +124,11 @@ export class PropertyRepositoryTypeORM implements PropertyRepository {
     return PropertyMapper.fromEntityToDomain(saved);
   }
 
-  async deleteWithPastRentals(propertyId: UUID): Promise<boolean> {
-    const today = businessToday();
-
+  async deleteWithPastRentals(propertyId: UUID, today: Date): Promise<boolean> {
     return this.manager.transaction(async (manager) => {
       await manager.delete(RentalEntity, {
         propertyId,
-        checkOutDate: LessThan(today),
+        checkOutDate: LessThan(RentalMapper.toDateColumn(today)),
       });
 
       const result = await manager.delete(PropertyEntity, { id: propertyId });

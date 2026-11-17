@@ -40,13 +40,18 @@ CREATE TABLE owners (
     name VARCHAR(100) NOT NULL,
     phone VARCHAR(20) NOT NULL,
     email VARCHAR(150) NOT NULL,
-    bank_id VARCHAR(36) NOT NULL,
 
-    -- Money received from rentals of the owner's properties
+    -- Bank account where the owner receives the net amount of the rentals
+    bank_id VARCHAR(36) NOT NULL,
+    account_number VARCHAR(30) NOT NULL,
+    account_type VARCHAR(50) NOT NULL,
+
+    -- Net amount (90%) received from the rentals of the owner's properties
     balance DECIMAL(12,2) NOT NULL DEFAULT 0,
 
     FOREIGN KEY (bank_id) REFERENCES banks(id),
-    CONSTRAINT CHK_owners_balance CHECK (balance >= 0)
+    CONSTRAINT CHK_owners_balance CHECK (balance >= 0),
+    CONSTRAINT UQ_owners_bank_account UNIQUE (bank_id, account_number)
 );
 
 CREATE UNIQUE INDEX UQ_owners_email_lower ON owners (LOWER(email));
@@ -80,7 +85,35 @@ CREATE TABLE clients (
 CREATE UNIQUE INDEX UQ_clients_email_lower ON clients (LOWER(email));
 
 -- =========================================
--- 6. PROPERTIES
+-- 6. ADMINISTRATORS
+-- =========================================
+
+-- Receives the payment of every rental, keeps a 10% commission and passes
+-- the rest to the owner
+CREATE TABLE administrators (
+    id VARCHAR(36) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    email VARCHAR(150) NOT NULL,
+
+    -- Bank account that receives the payments
+    bank_id VARCHAR(36) NOT NULL,
+    account_number VARCHAR(30) NOT NULL,
+    account_type VARCHAR(50) NOT NULL,
+
+    -- Accumulated commissions
+    balance DECIMAL(12,2) NOT NULL DEFAULT 0,
+
+    FOREIGN KEY (bank_id) REFERENCES banks(id),
+    CONSTRAINT CHK_administrators_balance CHECK (balance >= 0)
+);
+
+-- There is a single administrator: a unique index on a constant allows
+-- only one row
+CREATE UNIQUE INDEX UQ_administrators_single ON administrators ((TRUE));
+
+-- =========================================
+-- 7. PROPERTIES
 -- =========================================
 
 CREATE TABLE properties (
@@ -104,7 +137,7 @@ CREATE TABLE properties (
 );
 
 -- =========================================
--- 7. RENTALS
+-- 8. RENTALS
 -- =========================================
 
 CREATE EXTENSION IF NOT EXISTS btree_gist;
@@ -114,6 +147,8 @@ CREATE TABLE rentals (
     client_id VARCHAR(36) NOT NULL,
     check_in_date DATE NOT NULL,
     check_out_date DATE NOT NULL,
+
+    -- Rental cost (nights × price per night), paid by the client
     charged_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
     status VARCHAR(20) NOT NULL DEFAULT 'UPCOMING',
 
@@ -125,6 +160,7 @@ CREATE TABLE rentals (
     CONSTRAINT CHK_rentals_dates CHECK (check_out_date > check_in_date),
     CONSTRAINT CHK_rentals_status CHECK (status IN ('UPCOMING', 'ACTIVE', 'FINISHED')),
 
+    -- Safety net: the domain already rejects overlapping rentals
     CONSTRAINT EXCL_rentals_property_period
         EXCLUDE USING gist (
             property_id WITH =,
@@ -139,11 +175,49 @@ CREATE TABLE rentals (
 );
 
 -- =========================================
+-- 9. ADMINISTRATOR ↔ OWNER TRANSACTIONS
+-- =========================================
+
+-- One row per money movement between the administrator and an owner.
+-- Rows are only inserted: a cancellation adds a REFUND, it does not delete
+-- the PAYMENT. There is no reference to the rental on purpose.
+CREATE TABLE administrator_owner_transactions (
+    id VARCHAR(36) PRIMARY KEY,
+    administrator_id VARCHAR(36) NOT NULL,
+    owner_id VARCHAR(36) NOT NULL,
+    type VARCHAR(10) NOT NULL,
+
+    -- What the client paid
+    gross_amount DECIMAL(12,2) NOT NULL,
+    -- What the administrator keeps (10%)
+    commission DECIMAL(12,2) NOT NULL,
+    -- What the owner receives
+    net_amount DECIMAL(12,2) NOT NULL,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    FOREIGN KEY (administrator_id) REFERENCES administrators(id),
+    FOREIGN KEY (owner_id) REFERENCES owners(id),
+
+    CONSTRAINT CHK_aot_type CHECK (type IN ('PAYMENT', 'REFUND')),
+    CONSTRAINT CHK_aot_amounts CHECK (
+        gross_amount > 0
+        AND commission >= 0
+        AND net_amount >= 0
+        AND net_amount = gross_amount - commission
+    )
+);
+
+-- Earnings and detail by owner
+CREATE INDEX IX_aot_owner_created_at
+    ON administrator_owner_transactions (owner_id, created_at);
+
+-- =========================================
 -- SEED DATA
 -- =========================================
 
 -- =========================================
--- 8. COUNTRIES
+-- 10. COUNTRIES
 -- =========================================
 
 INSERT INTO countries (id, name) VALUES
@@ -153,7 +227,7 @@ INSERT INTO countries (id, name) VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================================
--- 9. CITIES
+-- 11. CITIES
 -- =========================================
 
 INSERT INTO cities (id, name, country_id) VALUES
@@ -164,7 +238,7 @@ INSERT INTO cities (id, name, country_id) VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================================
--- 10. BANKS
+-- 12. BANKS
 -- =========================================
 
 INSERT INTO banks (id, name, country_id) VALUES
@@ -175,18 +249,19 @@ INSERT INTO banks (id, name, country_id) VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================================
--- 11. OWNERS
+-- 13. OWNERS
 -- =========================================
 
-INSERT INTO owners (id, name, phone, email, bank_id) VALUES
-    ('a0000000-0000-4000-8000-000000000001', 'Ana Gómez', '3001234567', 'ana.gomez@example.com', 'b0000000-0000-4000-8000-000000000001'),
-    ('a0000000-0000-4000-8000-000000000002', 'Carlos Pérez', '3109876543', 'carlos.perez@example.com', 'b0000000-0000-4000-8000-000000000002'),
-    ('a0000000-0000-4000-8000-000000000003', 'Laura Martínez', '5512345678', 'laura.martinez@example.com', 'b0000000-0000-4000-8000-000000000003'),
-    ('a0000000-0000-4000-8000-000000000004', 'Javier López', '34600111222', 'javier.lopez@example.com', 'b0000000-0000-4000-8000-000000000004')
+-- balance starts at 0 and is computed from the transactions (section 18)
+INSERT INTO owners (id, name, phone, email, bank_id, account_number, account_type) VALUES
+    ('a0000000-0000-4000-8000-000000000001', 'Ana Gómez', '3001234567', 'ana.gomez@example.com', 'b0000000-0000-4000-8000-000000000001', '5001001001', 'Ahorros'),
+    ('a0000000-0000-4000-8000-000000000002', 'Carlos Pérez', '3109876543', 'carlos.perez@example.com', 'b0000000-0000-4000-8000-000000000002', '5002002002', 'Corriente'),
+    ('a0000000-0000-4000-8000-000000000003', 'Laura Martínez', '5512345678', 'laura.martinez@example.com', 'b0000000-0000-4000-8000-000000000003', '5003003003', 'Ahorros'),
+    ('a0000000-0000-4000-8000-000000000004', 'Javier López', '34600111222', 'javier.lopez@example.com', 'b0000000-0000-4000-8000-000000000004', '5004004004', 'Corriente')
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================================
--- 12. CLIENTS
+-- 14. CLIENTS
 -- =========================================
 
 INSERT INTO clients (id, name, phone, email, city_id, bank_id, account_number, account_type, balance) VALUES
@@ -197,7 +272,16 @@ INSERT INTO clients (id, name, phone, email, city_id, bank_id, account_number, a
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================================
--- 13. PROPERTIES
+-- 15. ADMINISTRATOR
+-- =========================================
+
+-- balance starts at 0 and is computed from the transactions (section 18)
+INSERT INTO administrators (id, name, phone, email, bank_id, account_number, account_type) VALUES
+    ('f0000000-0000-4000-8000-000000000001', 'Administrador Brisa', '3000000000', 'admin@brisa.example.com', 'b0000000-0000-4000-8000-000000000001', '9001001001', 'Corriente')
+ON CONFLICT (id) DO NOTHING;
+
+-- =========================================
+-- 16. PROPERTIES
 -- =========================================
 
 INSERT INTO properties (id, address, area, number_of_rooms, capacity, price_per_night, owner_id, city_id) VALUES
@@ -209,7 +293,7 @@ INSERT INTO properties (id, address, area, number_of_rooms, capacity, price_per_
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================================
--- 14. RENTALS
+-- 17. RENTALS
 -- =========================================
 
 INSERT INTO rentals (property_id, client_id, check_in_date, check_out_date, charged_amount) VALUES
@@ -228,10 +312,38 @@ UPDATE rentals SET status = CASE
     ELSE 'ACTIVE'
 END;
 
--- Each owner receives what was charged for the rentals of their properties
+-- =========================================
+-- 18. TRANSACTIONS AND BALANCES
+-- =========================================
+
+-- One PAYMENT per seeded rental, as if it was booked 15 days before the
+-- check-in (never in the future). Commission: 10% rounded to cents; net:
+-- the rest, so commission + net is exactly the gross amount (same rule as
+-- the domain).
+INSERT INTO administrator_owner_transactions
+    (id, administrator_id, owner_id, type, gross_amount, commission, net_amount, created_at)
+SELECT
+    gen_random_uuid()::text,
+    'f0000000-0000-4000-8000-000000000001',
+    p.owner_id,
+    'PAYMENT',
+    r.charged_amount,
+    ROUND(r.charged_amount * 0.10, 2),
+    r.charged_amount - ROUND(r.charged_amount * 0.10, 2),
+    LEAST((r.check_in_date - INTERVAL '15 days')::timestamptz, NOW())
+FROM rentals r
+JOIN properties p ON p.id = r.property_id;
+
+-- Each owner holds the net amount of its transactions
 UPDATE owners o SET balance = COALESCE((
-    SELECT SUM(r.charged_amount)
-    FROM rentals r
-    JOIN properties p ON p.id = r.property_id
-    WHERE p.owner_id = o.id
+    SELECT SUM(CASE WHEN t.type = 'PAYMENT' THEN t.net_amount ELSE -t.net_amount END)
+    FROM administrator_owner_transactions t
+    WHERE t.owner_id = o.id
+), 0);
+
+-- The administrator holds the commissions
+UPDATE administrators a SET balance = COALESCE((
+    SELECT SUM(CASE WHEN t.type = 'PAYMENT' THEN t.commission ELSE -t.commission END)
+    FROM administrator_owner_transactions t
+    WHERE t.administrator_id = a.id
 ), 0);
