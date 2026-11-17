@@ -1,4 +1,14 @@
 import { UUID } from '@/utils/types.js';
+import {
+  type BankAccountChanges,
+  mergeBankAccount,
+  normalizeEmail,
+  requireAccountNumber,
+  requireAccountType,
+  requireBankId,
+  requireName,
+  requirePhone,
+} from './contact-rules.js';
 import { DomainError } from './errors/domain-error.js';
 import { DomainErrorCode } from './errors/domain-error-codes.js';
 import {
@@ -7,7 +17,10 @@ import {
   isBalanceEnough,
   subtractFromBalance,
 } from './money.js';
+import type { Property } from './property.js';
+import { Rental } from './rental.js';
 
+// Diagram: Cliente
 export class Client {
   constructor(
     private readonly id: UUID,
@@ -20,89 +33,133 @@ export class Client {
     private accountType: string,
     private balance: number = 0,
   ) {
-    this.validate();
+    assertValidBalance(this.balance);
+    this.name = requireName(name);
+    this.phone = requirePhone(phone);
+    this.email = normalizeEmail(email);
+    this.cityId = Client.requireCityId(cityId);
+    this.bankId = requireBankId(bankId);
+    this.accountNumber = requireAccountNumber(accountNumber);
+    this.accountType = requireAccountType(accountType);
   }
 
-  private validate(): void {
-    assertValidBalance(this.balance);
+  private static requireCityId(cityId: string): string {
+    if (!cityId.trim()) {
+      throw new DomainError(DomainErrorCode.INVALID_CITY, 'The city is not valid');
+    }
+    return cityId.trim();
+  }
 
-    if (!this.name.trim()) {
-      throw new DomainError(DomainErrorCode.NAME_REQUIRED, 'The name is required');
+  // Diagram: reservarInmueble(). The client creates the rental.
+  // propertyRentals and clientRentals are the current (not finished)
+  // rentals of the property and of this client; the caller loads them.
+  // The rental is not paid here: Bank.transferPayment does it.
+  reserveProperty(
+    property: Property,
+    startDate: Date,
+    endDate: Date,
+    propertyRentals: Rental[],
+    clientRentals: Rental[],
+    today: Date,
+  ): Rental {
+    const rental = new Rental(property.getId(), this.id, startDate, endDate);
+    rental.assertCanStartOn(today);
+
+    if (!property.checkAvailability(startDate, endDate, propertyRentals)) {
+      throw new DomainError(
+        DomainErrorCode.PROPERTY_NOT_AVAILABLE,
+        'The property is not available for the selected dates',
+      );
     }
 
-    if (!this.phone.trim()) {
-      throw new DomainError(DomainErrorCode.PHONE_REQUIRED, 'The phone is required');
+    const hasOverlap = clientRentals.some(
+      (existing) =>
+        existing.getClientId() === this.id &&
+        existing.overlaps(startDate, endDate),
+    );
+    if (hasOverlap) {
+      throw new DomainError(
+        DomainErrorCode.CLIENT_HAS_OVERLAPPING_RENTAL,
+        'The client has an overlapping active or upcoming rental',
+      );
     }
 
-    if (!this.email.trim()) {
-      throw new DomainError(DomainErrorCode.EMAIL_REQUIRED, 'The email is required');
+    const cost = rental.calculateCost(property.getPricePerNight());
+    if (!this.hasEnoughBalance(cost)) {
+      throw new DomainError(
+        DomainErrorCode.INSUFFICIENT_BALANCE,
+        'The client balance is not enough to pay the rental',
+      );
     }
 
-    if (!this.bankId.trim()) {
-      throw new DomainError(DomainErrorCode.INVALID_BANK, 'The bank is not valid');
-    }
+    rental.refreshStatus(today);
+    return rental;
+  }
 
-    if (!this.accountNumber.trim()) {
-      throw new DomainError(DomainErrorCode.ACCOUNT_NUMBER_REQUIRED, 'The account number is required');
-    }
-
-    if (!this.accountType.trim()) {
-      throw new DomainError(DomainErrorCode.ACCOUNT_TYPE_REQUIRED, 'The account type is required');
+  // currentRentals are the current (not finished) rentals of this client
+  assertCanBeDeleted(currentRentals: Rental[]): void {
+    const hasCurrent = currentRentals.some(
+      (rental) => rental.getClientId() === this.id,
+    );
+    if (hasCurrent) {
+      throw new DomainError(
+        DomainErrorCode.CLIENT_HAS_ACTIVE_RENTALS,
+        'The client has active or upcoming rentals',
+      );
     }
   }
 
   changeName(name: string): void {
-    if (!name.trim()) {
-      throw new DomainError(DomainErrorCode.NAME_REQUIRED, 'The name is required');
-    }
-
-    this.name = name;
+    this.name = requireName(name);
   }
 
   changeCityId(cityId: string): void {
-    if (!cityId.trim()) {
-      throw new DomainError(DomainErrorCode.INVALID_CITY, 'The city is not valid');
-    }
-
-    this.cityId = cityId;
+    this.cityId = Client.requireCityId(cityId);
   }
 
   changePhone(phone: string): void {
-    if (!phone.trim()) {
-      throw new DomainError(DomainErrorCode.PHONE_REQUIRED, 'The phone is required');
-    }
-
-    this.phone = phone;
+    this.phone = requirePhone(phone);
   }
 
   changeEmail(email: string): void {
-    if (!email.trim()) {
-      throw new DomainError(DomainErrorCode.EMAIL_REQUIRED, 'The email is required');
-    }
-
-    this.email = email;
+    this.email = normalizeEmail(email);
   }
 
-  changeBankAccount(
-    bankId: UUID,
-    accountNumber: string,
-    accountType: string,
-  ): void {
-    if (!bankId.trim() || !accountNumber.trim() || !accountType.trim()) {
-      throw new DomainError(DomainErrorCode.INVALID_BANK_ACCOUNT, 'The bank account data is not valid');
-    }
+  // Returns true if the account changed, so the caller knows whether to
+  // check that the new account is not registered by another client
+  changeBankAccount(changes: BankAccountChanges): boolean {
+    const next = mergeBankAccount(
+      {
+        bankId: this.bankId,
+        accountNumber: this.accountNumber,
+        accountType: this.accountType,
+      },
+      changes,
+    );
+    if (!next) return false;
 
-    this.bankId = bankId;
-    this.accountNumber = accountNumber;
-    this.accountType = accountType;
+    this.bankId = next.bankId;
+    this.accountNumber = next.accountNumber;
+    this.accountType = next.accountType;
+    return true;
   }
 
+  // Manual movements requested by the client
   deposit(amount: number): void {
     this.balance = addToBalance(this.balance, amount);
   }
 
-  discount(amount: number): void {
+  withdraw(amount: number): void {
     this.balance = subtractFromBalance(this.balance, amount);
+  }
+
+  // Movements of a rental, called by Bank
+  pay(amount: number): void {
+    this.balance = subtractFromBalance(this.balance, amount);
+  }
+
+  receiveRefund(amount: number): void {
+    this.balance = addToBalance(this.balance, amount);
   }
 
   hasEnoughBalance(amount: number): boolean {

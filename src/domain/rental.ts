@@ -1,6 +1,9 @@
 import { UUID } from '@/utils/types.js';
 import { DomainError } from './errors/domain-error.js';
 import { DomainErrorCode } from './errors/domain-error-codes.js';
+import { multiplyAmount } from './money.js';
+
+const MS_PER_DAY = 86_400_000;
 
 // A rental is identified by the property, the client and the start date
 export interface RentalKey {
@@ -15,13 +18,14 @@ export enum RentalStatus {
   FINISHED = 'FINISHED',
 }
 
+// Diagram: Renta. Created by Client.reserveProperty
 export class Rental {
   constructor(
     private readonly propertyId: UUID,
     private readonly clientId: UUID,
     private readonly startDate: Date,
     private readonly endDate: Date,
-    private chargedAmount: number = 0,
+    private cost: number = 0,
     private status: RentalStatus = RentalStatus.UPCOMING,
   ) {
     this.validate();
@@ -49,8 +53,8 @@ export class Rental {
       throw new DomainError(DomainErrorCode.END_DATE_NOT_AFTER_START_DATE, 'The end date must be after the start date');
     }
 
-    if (!Number.isFinite(this.chargedAmount) || this.chargedAmount < 0) {
-      throw new DomainError(DomainErrorCode.INVALID_CHARGED_AMOUNT, 'The charged amount is not valid');
+    if (!Number.isFinite(this.cost) || this.cost < 0) {
+      throw new DomainError(DomainErrorCode.INVALID_CHARGED_AMOUNT, 'The rental cost is not valid');
     }
 
     if (!Object.values(RentalStatus).includes(this.status)) {
@@ -58,12 +62,26 @@ export class Rental {
     }
   }
 
-  charge(amount: number): void {
-    if (!Number.isFinite(amount) || amount <= 0) {
-      throw new DomainError(DomainErrorCode.INVALID_CHARGE_AMOUNT, 'The charge amount is not valid');
-    }
+  // Diagram: calcularCosto(). Nights × price per night, in cents
+  calculateCost(pricePerNight: number): number {
+    this.cost = multiplyAmount(pricePerNight, this.getNights());
+    return this.cost;
+  }
 
-    this.chargedAmount = amount;
+  getNights(): number {
+    return Math.round(
+      (this.endDate.getTime() - this.startDate.getTime()) / MS_PER_DAY,
+    );
+  }
+
+  // Both ends are inclusive, like the database constraint
+  // daterange(check_in_date, check_out_date, '[]'): a stay cannot start
+  // on the day another one ends
+  overlaps(startDate: Date, endDate: Date): boolean {
+    return (
+      this.startDate.getTime() <= endDate.getTime() &&
+      this.endDate.getTime() >= startDate.getTime()
+    );
   }
 
   // Only applies when booking: rentals loaded from the database can have
@@ -77,24 +95,43 @@ export class Rental {
     }
   }
 
+  // Only upcoming rentals with a cost can be cancelled and refunded
+  assertCanBeCancelled(today: Date): void {
+    this.refreshStatus(today);
+
+    if (this.status !== RentalStatus.UPCOMING) {
+      throw new DomainError(
+        DomainErrorCode.RENTAL_ALREADY_STARTED,
+        'The rental has already started',
+      );
+    }
+
+    if (this.cost <= 0) {
+      throw new DomainError(
+        DomainErrorCode.RENTAL_HAS_NO_COST,
+        'The rental has no cost to refund',
+      );
+    }
+  }
+
   // today is a calendar day at UTC midnight, like startDate and endDate.
   // The caller decides which day it is (it depends on the time zone).
-  refreshStatus(today: Date): void {
+  // Returns true if the status changed.
+  refreshStatus(today: Date): boolean {
+    const previous = this.status;
     const start = this.startDate.getTime();
     const end = this.endDate.getTime();
     const current = today.getTime();
 
     if (current < start) {
       this.status = RentalStatus.UPCOMING;
-      return;
-    }
-
-    if (current < end) {
+    } else if (current < end) {
       this.status = RentalStatus.ACTIVE;
-      return;
+    } else {
+      this.status = RentalStatus.FINISHED;
     }
 
-    this.status = RentalStatus.FINISHED;
+    return this.status !== previous;
   }
 
   getKey(): RentalKey {
@@ -121,8 +158,8 @@ export class Rental {
     return new Date(this.endDate.getTime());
   }
 
-  getChargedAmount(): number {
-    return this.chargedAmount;
+  getCost(): number {
+    return this.cost;
   }
 
   getStatus(): RentalStatus {
@@ -135,6 +172,7 @@ export class Rental {
       clientId: this.clientId,
       startDate: this.startDate,
       endDate: this.endDate,
+      cost: this.cost,
       status: this.status,
     };
   }
