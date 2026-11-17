@@ -1,0 +1,50 @@
+import { Bank } from '@/domain/bank.js';
+import type { UUID } from '@/utils/types.js';
+import type { BankDetails } from '@/application/models/bank-details.js';
+import type { BankRepository } from '@/application/ports/out/repositories/bank-repository.js';
+import type { CountryRepository } from '@/application/ports/out/repositories/country-repository.js';
+
+// Plain class: bank.module.ts builds it with useFactory, so the
+// application layer does not depend on Nest
+export class BankService {
+  constructor(
+    private readonly bankRepository: BankRepository,
+    private readonly countryRepository: CountryRepository,
+  ) {}
+
+  async findAll(): Promise<BankDetails[]> {
+    const items = await this.bankRepository.findAll();
+    return this.loadDetails(items);
+  }
+
+  async findById(id: UUID): Promise<BankDetails | null> {
+    const item = await this.bankRepository.findById(id);
+    if (!item) return null;
+
+    const [details] = await this.loadDetails([item]);
+    return details;
+  }
+
+  async findByIds(ids: UUID[]): Promise<BankDetails[]> {
+    const items = await this.bankRepository.findByIds(ids);
+    return this.loadDetails(items);
+  }
+
+  private async loadDetails(items: Bank[]): Promise<BankDetails[]> {
+    if (items.length === 0) return [];
+
+    const countryIds = [...new Set(items.map((item) => item.getCountryId()))];
+    const countries = await this.countryRepository.findByIds(countryIds);
+    const countriesById = new Map(
+      countries.map((country) => [country.getId(), country]),
+    );
+
+    return items.map((bank) => {
+      const country = countriesById.get(bank.getCountryId());
+      if (!country) {
+        throw new Error(`Missing country for bank ${bank.getId()}`);
+      }
+      return { bank, country };
+    });
+  }
+}
