@@ -8,5 +8,4 @@ export interface CreateClientCommand {
   bankId: UUID;
   accountNumber: string;
   accountType: string;
-  balance: number;
 }

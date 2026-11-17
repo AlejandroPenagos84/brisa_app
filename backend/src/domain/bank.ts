@@ -19,8 +19,11 @@ export class Bank {
   ) {}
 
   // Diagram: girarPago(). The client's bank sends the cost of the rental
-  // to the administrator, who keeps the commission and credits the owner.
-  // owner must be the owner of the rented property.
+  // from the client's account to the administrator, who keeps the
+  // commission and credits the owner. owner must be the owner of the
+  // rented property.
+  // Simulated payment: the client's account is outside the app (there is
+  // no payment gateway), so the transfer is always approved.
   transferPayment(
     client: Client,
     administrator: Administrator,
@@ -29,13 +32,12 @@ export class Bank {
     meta: TransactionMeta,
   ): AdministratorTransaction {
     const amount = this.assertCanMove(client, rental);
-
-    client.pay(amount);
     return administrator.receivePayment(owner, amount, meta);
   }
 
-  // Inverse movement when a rental is cancelled: the client recovers the
-  // whole cost in the same bank account
+  // Inverse movement when a rental is cancelled: the owner and the
+  // administrator give the whole cost back to the client's bank account
+  // (simulated, outside the app)
   refundPayment(
     client: Client,
     administrator: Administrator,
@@ -44,10 +46,7 @@ export class Bank {
     meta: TransactionMeta,
   ): AdministratorTransaction {
     const amount = this.assertCanMove(client, rental);
-
-    const transaction = administrator.refundPayment(owner, amount, meta);
-    client.receiveRefund(amount);
-    return transaction;
+    return administrator.refundPayment(owner, amount, meta);
   }
 
   // Returns the amount to move

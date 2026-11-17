@@ -11,12 +11,6 @@ import {
 } from './contact-rules.js';
 import { DomainError } from './errors/domain-error.js';
 import { DomainErrorCode } from './errors/domain-error-codes.js';
-import {
-  addToBalance,
-  assertValidBalance,
-  isBalanceEnough,
-  subtractFromBalance,
-} from './money.js';
 import type { Property } from './property.js';
 import { Rental } from './rental.js';
 
@@ -31,9 +25,7 @@ export class Client {
     private bankId: UUID,
     private accountNumber: string,
     private accountType: string,
-    private balance: number = 0,
   ) {
-    assertValidBalance(this.balance);
     this.name = requireName(name);
     this.phone = requirePhone(phone);
     this.email = normalizeEmail(email);
@@ -53,7 +45,9 @@ export class Client {
   // Diagram: reservarInmueble(). The client creates the rental.
   // propertyRentals and clientRentals are the current (not finished)
   // rentals of the property and of this client; the caller loads them.
-  // The rental is not paid here: Bank.transferPayment does it.
+  // The rental is not paid here: Bank.transferPayment does it. The client
+  // pays from its own bank account, outside the app, so there is no
+  // balance to check.
   reserveProperty(
     property: Property,
     startDate: Date,
@@ -84,13 +78,7 @@ export class Client {
       );
     }
 
-    const cost = rental.calculateCost(property.getPricePerNight());
-    if (!this.hasEnoughBalance(cost)) {
-      throw new DomainError(
-        DomainErrorCode.INSUFFICIENT_BALANCE,
-        'The client balance is not enough to pay the rental',
-      );
-    }
+    rental.calculateCost(property.getPricePerNight());
 
     rental.refreshStatus(today);
     return rental;
@@ -144,28 +132,6 @@ export class Client {
     return true;
   }
 
-  // Manual movements requested by the client
-  deposit(amount: number): void {
-    this.balance = addToBalance(this.balance, amount);
-  }
-
-  withdraw(amount: number): void {
-    this.balance = subtractFromBalance(this.balance, amount);
-  }
-
-  // Movements of a rental, called by Bank
-  pay(amount: number): void {
-    this.balance = subtractFromBalance(this.balance, amount);
-  }
-
-  receiveRefund(amount: number): void {
-    this.balance = addToBalance(this.balance, amount);
-  }
-
-  hasEnoughBalance(amount: number): boolean {
-    return isBalanceEnough(this.balance, amount);
-  }
-
   getId(): UUID {
     return this.id;
   }
@@ -198,10 +164,6 @@ export class Client {
     return this.accountType;
   }
 
-  getBalance(): number {
-    return this.balance;
-  }
-
   getData() {
     return {
       id: this.id,
@@ -212,7 +174,6 @@ export class Client {
       bankId: this.bankId,
       accountNumber: this.accountNumber,
       accountType: this.accountType,
-      balance: this.balance,
     };
   }
 }

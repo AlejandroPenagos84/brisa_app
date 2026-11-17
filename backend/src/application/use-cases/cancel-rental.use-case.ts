@@ -5,8 +5,9 @@ import type { BankRepository } from '@/application/ports/out/repositories/bank-r
 import type { UnitOfWork } from '@/application/ports/out/repositories/unit-of-work.js';
 import type { RentalKey } from '@/domain/rental.js';
 
-// Cancels an upcoming rental: the client recovers the whole cost, the
-// owner gives back the net amount and the administrator the commission.
+// Cancels an upcoming rental: the owner gives back the net amount and the
+// administrator the commission, so the client recovers the whole cost in
+// its bank account (simulated, outside the app).
 // The PAYMENT transaction is kept and a REFUND is added.
 export class CancelRentalUseCase {
   constructor(
@@ -64,7 +65,6 @@ export class CancelRentalUseCase {
 
       // If another cancellation won: 0 rows -> NotFoundError -> rollback
       await repos.rentalsRepository.delete(key);
-      await repos.clientsRepository.update(client.getId(), client);
       await repos.ownersRepository.update(owner.getId(), owner);
       await repos.administratorsRepository.update(administrator);
       await repos.administratorTransactionsRepository.save(transaction);

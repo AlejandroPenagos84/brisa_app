@@ -1,5 +1,4 @@
 import {
-  Check,
   Column,
   Entity,
   JoinColumn,
@@ -10,11 +9,9 @@ import {
 } from 'typeorm';
 import { BankEntity } from '@/infrastructure/persistence/entities/bank.entity.js';
 import { CityEntity } from '@/infrastructure/persistence/entities/city.entity.js';
-import { decimalTransformer } from '@/infrastructure/persistence/entities/decimal.transformer.js';
 import { RentalEntity } from '@/infrastructure/persistence/entities/rental.entity.js';
 
 @Entity({ name: 'clients' })
-@Check('CHK_clients_balance', 'balance >= 0')
 export class ClientEntity {
   @PrimaryColumn({ name: 'id', type: 'varchar', length: 36 })
   id: string;
@@ -54,15 +51,6 @@ export class ClientEntity {
   })
   accountType: string;
 
-  @Column({
-    name: 'balance',
-    type: 'decimal',
-    precision: 12,
-    scale: 2,
-    default: 0,
-    transformer: decimalTransformer,
-  })
-  balance: number;
 
   @OneToMany(() => RentalEntity, (rental) => rental.client)
   rentals: Relation<RentalEntity[]>;

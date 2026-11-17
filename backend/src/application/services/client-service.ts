@@ -85,7 +85,6 @@ export class ClientService {
       command.bankId,
       command.accountNumber,
       command.accountType,
-      command.balance,
     );
 
     const [city, bank, emailExists, accountExists] = await Promise.all([
@@ -115,24 +114,6 @@ export class ClientService {
     }
 
     return this.clientRepository.save(client);
-  }
-
-  async deposit(id: UUID, amount: number): Promise<Client> {
-    return this.unitOfWork.run(async ({ clientsRepository }) => {
-      const client = await clientsRepository.findByIdForUpdate(id);
-      if (!client) throw new NotFoundError(`Client with id ${id} not found`);
-      client.deposit(amount);
-      return clientsRepository.update(id, client);
-    });
-  }
-
-  async withdraw(id: UUID, amount: number): Promise<Client> {
-    return this.unitOfWork.run(async ({ clientsRepository }) => {
-      const client = await clientsRepository.findByIdForUpdate(id);
-      if (!client) throw new NotFoundError(`Client with id ${id} not found`);
-      client.withdraw(amount);
-      return clientsRepository.update(id, client);
-    });
   }
 
   // The domain rejects it if the client has current rentals. The client is

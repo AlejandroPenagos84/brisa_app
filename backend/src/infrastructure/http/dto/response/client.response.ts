@@ -44,9 +44,6 @@ export class ClientResponse {
 
   @ApiProperty({ description: 'Client bank account type', example: 'Ahorros' })
   accountType: string;
-
-  @ApiProperty({ description: 'Current account balance', example: 100 })
-  balance: number;
 }
 
 export class ClientDetailsResponse extends ClientResponse {

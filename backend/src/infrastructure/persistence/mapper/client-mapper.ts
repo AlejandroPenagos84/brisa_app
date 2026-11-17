@@ -12,7 +12,6 @@ export class ClientMapper {
       entity.bankId,
       entity.accountNumber,
       entity.accountType,
-      entity.balance,
     );
   }
 
@@ -27,7 +26,6 @@ export class ClientMapper {
     entity.bankId = data.bankId;
     entity.accountNumber = data.accountNumber;
     entity.accountType = data.accountType;
-    entity.balance = data.balance;
     return entity;
   }
 }

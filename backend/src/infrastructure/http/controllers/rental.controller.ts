@@ -25,10 +25,8 @@ import { RentalService } from '@/application/services/rental-service.js';
 import { CancelRentalUseCase } from '@/application/use-cases/cancel-rental.use-case.js';
 import { ReservePropertyUseCase } from '@/application/use-cases/reserve-property.use-case.js';
 import { CreateRentalRequest } from '@/infrastructure/http/dto/request/create/create-rental.request.js';
-import {
-  RentalResponse,
-  RentalDetailsResponse,
-} from '@/infrastructure/http/dto/response/rental.response.js';
+import { RentalDetailsResponse } from '@/infrastructure/http/dto/response/rental.response.js';
+import { ReservationResponse } from '@/infrastructure/http/dto/response/reservation.response.js';
 import { RentalHttpMapper } from '@/infrastructure/http/mappers/rental-http.mapper.js';
 
 // The client is part of the rental key, so cancelling another client's
@@ -128,7 +126,7 @@ export class RentalController {
   @Delete(':propertyId/:clientId/:startDate')
   @ApiOperation({
     summary:
-      'Cancel a rental: the client recovers the whole cost (owner net amount + administrator commission)',
+      'Cancel a rental: the owner and the administrator give the whole cost back to the client bank account (simulated)',
   })
   @ApiParam({
     name: 'propertyId',
@@ -163,18 +161,23 @@ export class RentalController {
   @Post()
   @ApiOperation({
     summary:
-      'Reserve a property (reservarInmueble): the client pays, the administrator keeps 10% and the owner receives 90%',
+      'Reserve a property (reservarInmueble): the client pays from its bank account (simulated, always approved), the administrator keeps 10% and the owner receives 90%',
   })
-  @ApiCreatedResponse({ description: 'Rental created', type: RentalResponse })
+  @ApiCreatedResponse({
+    description: 'Rental created with its payment receipt',
+    type: ReservationResponse,
+  })
   @ApiBadRequestResponse({ description: 'Invalid rental dates or data' })
   @ApiNotFoundResponse({ description: 'Client or property not found' })
   @ApiConflictResponse({
     description:
-      'The property is not available for the dates, the client has an overlapping rental or insufficient balance, or a balance would exceed the maximum',
+      'The property is not available for the dates, the client has an overlapping rental, or a balance would exceed the maximum',
   })
-  async create(@Body() request: CreateRentalRequest): Promise<RentalResponse> {
+  async create(
+    @Body() request: CreateRentalRequest,
+  ): Promise<ReservationResponse> {
     const command = RentalHttpMapper.fromCreateRequestToCommand(request);
-    const rental = await this.reserveProperty.execute(command);
-    return RentalHttpMapper.fromDomainToResponse(rental);
+    const reservation = await this.reserveProperty.execute(command);
+    return RentalHttpMapper.fromReservationToResponse(reservation);
   }
 }

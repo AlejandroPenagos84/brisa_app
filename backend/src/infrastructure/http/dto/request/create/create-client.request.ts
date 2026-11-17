@@ -2,12 +2,9 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   IsEmail,
   IsNotEmpty,
-  IsNumber,
   IsString,
   IsUUID,
-  Max,
   MaxLength,
-  Min,
 } from 'class-validator';
 
 export class CreateClientRequest {
@@ -76,16 +73,4 @@ export class CreateClientRequest {
   @IsNotEmpty()
   @MaxLength(50)
   accountType: string;
-
-  @ApiProperty({
-    description: 'Initial account balance',
-    example: 100,
-    default: 0,
-    minimum: 0,
-    maximum: 9_999_999_999.99,
-  })
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  @Max(9_999_999_999.99)
-  balance: number = 0;
 }

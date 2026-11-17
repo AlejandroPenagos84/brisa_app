@@ -23,7 +23,6 @@ export class ClientHttpMapper {
       bankId: request.bankId,
       accountNumber: trimText(request.accountNumber),
       accountType: trimText(request.accountType),
-      balance: request.balance,
     };
   }
 
@@ -52,7 +51,6 @@ export class ClientHttpMapper {
       bankId: data.bankId,
       accountNumber: data.accountNumber,
       accountType: data.accountType,
-      balance: data.balance,
     };
   }
 

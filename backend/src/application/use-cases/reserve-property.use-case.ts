@@ -4,9 +4,10 @@ import { NotFoundError } from '@/application/errors/application-error.js';
 import type { Clock } from '@/application/ports/out/clock.js';
 import type { BankRepository } from '@/application/ports/out/repositories/bank-repository.js';
 import type { UnitOfWork } from '@/application/ports/out/repositories/unit-of-work.js';
-import type { Rental } from '@/domain/rental.js';
+import type { Reservation } from '@/application/models/reservation.js';
 
-// The client reserves a property and pays it through its bank: the
+// The client reserves a property and pays it from its bank account. The
+// payment is simulated (no gateway): it is always approved. The
 // administrator keeps the commission and the owner receives the rest.
 // Only loads, calls the domain and saves; the rules live in the domain.
 export class ReservePropertyUseCase {
@@ -16,11 +17,13 @@ export class ReservePropertyUseCase {
     private readonly clock: Clock,
   ) {}
 
-  async execute(command: ReservePropertyCommand): Promise<Rental> {
+  async execute(command: ReservePropertyCommand): Promise<Reservation> {
     const today = this.clock.today();
 
     return this.unitOfWork.run(async (repos) => {
-      // Lock order: client → property → owner → administrator
+      // Lock order: client → property → owner → administrator.
+      // The client is not modified (it pays outside the app), but locking
+      // it serializes its reservations, so the overlap check is reliable.
       const client = await repos.clientsRepository.findByIdForUpdate(
         command.clientId,
       );
@@ -79,11 +82,10 @@ export class ReservePropertyUseCase {
       );
 
       await repos.rentalsRepository.save(rental);
-      await repos.clientsRepository.update(client.getId(), client);
       await repos.ownersRepository.update(owner.getId(), owner);
       await repos.administratorsRepository.update(administrator);
       await repos.administratorTransactionsRepository.save(transaction);
-      return rental;
+      return { rental, payment: transaction, client };
     });
   }
 }

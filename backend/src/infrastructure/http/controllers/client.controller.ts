@@ -11,7 +11,6 @@ import {
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
-  ApiBody,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiNotFoundResponse,
@@ -24,13 +23,14 @@ import { ClientService } from '@/application/services/client-service.js';
 import { UpdateClientUseCase } from '@/application/use-cases/update-client.use-case.js';
 import { CreateClientRequest } from '@/infrastructure/http/dto/request/create/create-client.request.js';
 import { UpdateClientRequest } from '@/infrastructure/http/dto/request/update/update-client.request.js';
-import { AmountRequest } from '@/infrastructure/http/dto/request/update/amount.request.js';
 import {
   ClientResponse,
   ClientDetailsResponse,
 } from '@/infrastructure/http/dto/response/client.response.js';
 import { ClientHttpMapper } from '@/infrastructure/http/mappers/client-http.mapper.js';
 
+// The client balance only changes through rentals: it pays when it
+// reserves and gets the money back when it cancels
 @ApiTags('Clients')
 @Controller('clients')
 export class ClientController {
@@ -98,46 +98,6 @@ export class ClientController {
     const command = ClientHttpMapper.fromUpdateRequestToCommand(request);
     const updated = await this.updateClient.execute(id, command);
     return ClientHttpMapper.fromDomainToBasicResponse(updated);
-  }
-
-  @Patch(':id/deposit')
-  @ApiOperation({ summary: 'Deposit money into a client account' })
-  @ApiParam({ name: 'id', description: 'Client identifier', format: 'uuid' })
-  @ApiBody({ type: AmountRequest })
-  @ApiOkResponse({
-    description: 'Deposit applied and client returned',
-    type: ClientResponse,
-  })
-  @ApiBadRequestResponse({ description: 'Invalid amount' })
-  @ApiConflictResponse({
-    description: 'The balance exceeds the maximum allowed',
-  })
-  @ApiNotFoundResponse({ description: 'Client not found' })
-  async deposit(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() request: AmountRequest,
-  ): Promise<ClientResponse> {
-    const client = await this.clientService.deposit(id, request.amount);
-    return ClientHttpMapper.fromDomainToBasicResponse(client);
-  }
-
-  @Patch(':id/withdraw')
-  @ApiOperation({ summary: 'Withdraw money from a client account' })
-  @ApiParam({ name: 'id', description: 'Client identifier', format: 'uuid' })
-  @ApiBody({ type: AmountRequest })
-  @ApiOkResponse({
-    description: 'Withdrawal applied and client returned',
-    type: ClientResponse,
-  })
-  @ApiBadRequestResponse({ description: 'Invalid amount' })
-  @ApiConflictResponse({ description: 'Insufficient balance' })
-  @ApiNotFoundResponse({ description: 'Client not found' })
-  async withdraw(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() request: AmountRequest,
-  ): Promise<ClientResponse> {
-    const client = await this.clientService.withdraw(id, request.amount);
-    return ClientHttpMapper.fromDomainToBasicResponse(client);
   }
 
   @Delete(':id')

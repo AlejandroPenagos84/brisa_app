@@ -69,16 +69,15 @@ CREATE TABLE clients (
     -- City where the client lives
     city_id VARCHAR(36) NOT NULL,
 
-    -- Bank account linked to the client
+    -- Bank account the client pays from. Payments are simulated (no
+    -- gateway), so the app does not keep a client balance
     bank_id VARCHAR(36) NOT NULL,
     account_number VARCHAR(30) NOT NULL,
     account_type VARCHAR(50) NOT NULL,
-    balance DECIMAL(12,2) NOT NULL DEFAULT 0,
 
     FOREIGN KEY (city_id) REFERENCES cities(id),
     FOREIGN KEY (bank_id) REFERENCES banks(id),
 
-    CONSTRAINT CHK_clients_balance CHECK (balance >= 0),
     CONSTRAINT UQ_clients_bank_account UNIQUE (bank_id, account_number)
 );
 
@@ -264,11 +263,11 @@ ON CONFLICT (id) DO NOTHING;
 -- 14. CLIENTS
 -- =========================================
 
-INSERT INTO clients (id, name, phone, email, city_id, bank_id, account_number, account_type, balance) VALUES
-    ('d0000000-0000-4000-8000-000000000001', 'Sofía Ramírez', '3201112233', 'sofia.ramirez@example.com', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', '1002003001', 'Ahorros', 500.00),
-    ('d0000000-0000-4000-8000-000000000002', 'Diego Torres', '3114445566', 'diego.torres@example.com', 'c0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000002', '2003004002', 'Corriente', 1200.50),
-    ('d0000000-0000-4000-8000-000000000003', 'Valentina Ruiz', '5522334455', 'valentina.ruiz@example.com', 'c0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000003', '3004005003', 'Ahorros', 250.00),
-    ('d0000000-0000-4000-8000-000000000004', 'Andrés Herrera', '34611222333', 'andres.herrera@example.com', 'c0000000-0000-4000-8000-000000000004', 'b0000000-0000-4000-8000-000000000004', '4005006004', 'Corriente', 0.00)
+INSERT INTO clients (id, name, phone, email, city_id, bank_id, account_number, account_type) VALUES
+    ('d0000000-0000-4000-8000-000000000001', 'Sofía Ramírez', '3201112233', 'sofia.ramirez@example.com', 'c0000000-0000-4000-8000-000000000001', 'b0000000-0000-4000-8000-000000000001', '1002003001', 'Ahorros'),
+    ('d0000000-0000-4000-8000-000000000002', 'Diego Torres', '3114445566', 'diego.torres@example.com', 'c0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000002', '2003004002', 'Corriente'),
+    ('d0000000-0000-4000-8000-000000000003', 'Valentina Ruiz', '5522334455', 'valentina.ruiz@example.com', 'c0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000003', '3004005003', 'Ahorros'),
+    ('d0000000-0000-4000-8000-000000000004', 'Andrés Herrera', '34611222333', 'andres.herrera@example.com', 'c0000000-0000-4000-8000-000000000004', 'b0000000-0000-4000-8000-000000000004', '4005006004', 'Corriente')
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================================

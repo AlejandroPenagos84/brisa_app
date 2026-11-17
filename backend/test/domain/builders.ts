@@ -29,7 +29,7 @@ export function aBank(id = IDS.bank): Bank {
   return new Bank(id, 'Bancolombia', IDS.country);
 }
 
-export function aClient(balance = 1000, bankId = IDS.bank): Client {
+export function aClient(bankId = IDS.bank): Client {
   return new Client(
     IDS.client,
     'Sofía Ramírez',
@@ -39,7 +39,6 @@ export function aClient(balance = 1000, bankId = IDS.bank): Client {
     bankId,
     '1002003001',
     'Ahorros',
-    balance,
   );
 }
 
