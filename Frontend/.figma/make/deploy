@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+npm run build
+[[ -f dist/index.html ]] || {
+  echo "Expected build output at dist/index.html" >&2
+  exit 1
+}
+
+figma make deploy --build-dir dist
