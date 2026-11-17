@@ -12,6 +12,7 @@ export interface RentalRepository {
   findByKey(key: RentalKey): Promise<Rental | null>;
   findCurrentByPropertyId(propertyId: UUID, today: Date): Promise<Rental[]>;
   findCurrentByClientId(clientId: UUID, today: Date): Promise<Rental[]>;
+  findCurrentByPropertyIds(propertyIds: UUID[], today: Date): Promise<Rental[]>;
   updateStatuses(rentals: Rental[]): Promise<void>;
   save(rental: Rental): Promise<Rental>;
   update(key: RentalKey, rental: Rental): Promise<Rental>;

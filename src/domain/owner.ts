@@ -91,15 +91,26 @@ export class Owner {
     }
   }
 
-  // ownedProperties are the properties of this owner
-  assertCanBeDeleted(ownedProperties: Property[]): void {
-    const hasProperties = ownedProperties.some(
-      (property) => property.getOwnerId() === this.id,
+  // The owner is deleted with its properties and transactions; it is only
+  // blocked while one of its properties has a current (not finished)
+  // rental. currentRentals can include rentals of other properties.
+  assertCanBeDeleted(
+    ownedProperties: Property[],
+    currentRentals: Rental[],
+  ): void {
+    const ownedIds = new Set(
+      ownedProperties
+        .filter((property) => property.getOwnerId() === this.id)
+        .map((property) => property.getId()),
     );
-    if (hasProperties) {
+
+    const hasActiveRentals = currentRentals.some((rental) =>
+      ownedIds.has(rental.getPropertyId()),
+    );
+    if (hasActiveRentals) {
       throw new DomainError(
-        DomainErrorCode.OWNER_HAS_PROPERTIES,
-        'The owner has properties and cannot be deleted',
+        DomainErrorCode.OWNER_HAS_ACTIVE_RENTALS,
+        'A property of the owner has active or upcoming rentals',
       );
     }
   }

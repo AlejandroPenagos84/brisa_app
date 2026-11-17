@@ -4,7 +4,7 @@ import { PropertyStatus } from '@/domain/property.js';
 import { CreatePropertyRequest } from '../create/create-property.request.js';
 
 export class UpdatePropertyRequest extends PartialType(
-  OmitType(CreatePropertyRequest, ['ownerId', 'cityId'] as const),
+  OmitType(CreatePropertyRequest, ['cityId'] as const),
   { skipNullProperties: false },
 ) {
   @ApiPropertyOptional({

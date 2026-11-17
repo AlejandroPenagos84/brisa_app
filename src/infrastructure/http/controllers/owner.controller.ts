@@ -11,7 +11,6 @@ import {
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
-  ApiBody,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiNotFoundResponse,
@@ -21,16 +20,29 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { OwnerService } from '@/application/services/owner-service.js';
-import { AmountRequest } from '@/infrastructure/http/dto/request/update/amount.request.js';
+import { CreateOwnerUseCase } from '@/application/use-cases/create-owner.use-case.js';
+import { DeleteOwnerUseCase } from '@/application/use-cases/delete-owner.use-case.js';
+import { UpdateOwnerUseCase } from '@/application/use-cases/update-owner.use-case.js';
 import { CreateOwnerRequest } from '@/infrastructure/http/dto/request/create/create-owner.request.js';
 import { UpdateOwnerRequest } from '@/infrastructure/http/dto/request/update/update-owner.request.js';
+import {
+  OwnerEarningsResponse,
+  OwnerTransactionsResponse,
+} from '@/infrastructure/http/dto/response/owner-earnings.response.js';
 import { OwnerResponse } from '@/infrastructure/http/dto/response/owner.response.js';
 import { OwnerHttpMapper } from '@/infrastructure/http/mappers/owner-http.mapper.js';
 
+// The owner balance only changes through rental payments: there are no
+// deposit or withdraw endpoints
 @ApiTags('Owners')
 @Controller('owners')
 export class OwnerController {
-  constructor(private readonly ownerService: OwnerService) {}
+  constructor(
+    private readonly ownerService: OwnerService,
+    private readonly createOwner: CreateOwnerUseCase,
+    private readonly updateOwner: UpdateOwnerUseCase,
+    private readonly deleteOwner: DeleteOwnerUseCase,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'List owners' })
@@ -55,6 +67,35 @@ export class OwnerController {
     return OwnerHttpMapper.fromDomainToResponse(owner);
   }
 
+  @Get(':id/earnings')
+  @ApiOperation({
+    summary: 'Total earned by an owner (net payments minus net refunds)',
+  })
+  @ApiParam({ name: 'id', description: 'Owner identifier', format: 'uuid' })
+  @ApiOkResponse({ description: 'Owner earnings', type: OwnerEarningsResponse })
+  @ApiNotFoundResponse({ description: 'Owner not found' })
+  async getEarnings(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<OwnerEarningsResponse> {
+    const earnings = await this.ownerService.getEarnings(id);
+    return OwnerHttpMapper.fromEarningsToResponse(earnings);
+  }
+
+  @Get(':id/transactions')
+  @ApiOperation({ summary: 'Payments and refunds of an owner, newest first' })
+  @ApiParam({ name: 'id', description: 'Owner identifier', format: 'uuid' })
+  @ApiOkResponse({
+    description: 'Owner transactions',
+    type: OwnerTransactionsResponse,
+  })
+  @ApiNotFoundResponse({ description: 'Owner not found' })
+  async getTransactions(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<OwnerTransactionsResponse> {
+    const detail = await this.ownerService.getTransactions(id);
+    return OwnerHttpMapper.fromTransactionsToResponse(detail);
+  }
+
   @Post()
   @ApiOperation({ summary: 'Create an owner' })
   @ApiCreatedResponse({
@@ -63,10 +104,12 @@ export class OwnerController {
   })
   @ApiBadRequestResponse({ description: 'Invalid owner data' })
   @ApiNotFoundResponse({ description: 'Bank not found' })
-  @ApiConflictResponse({ description: 'Email already registered' })
+  @ApiConflictResponse({
+    description: 'Email or bank account already registered',
+  })
   async create(@Body() request: CreateOwnerRequest): Promise<OwnerResponse> {
     const command = OwnerHttpMapper.fromCreateRequestToCommand(request);
-    const { owner, bank } = await this.ownerService.create(command);
+    const { owner, bank } = await this.createOwner.execute(command);
     return OwnerHttpMapper.fromDomainWithBankToResponse(owner, bank);
   }
 
@@ -76,66 +119,30 @@ export class OwnerController {
   @ApiOkResponse({ description: 'Owner updated', type: OwnerResponse })
   @ApiBadRequestResponse({ description: 'Invalid owner data' })
   @ApiNotFoundResponse({ description: 'Owner or bank not found' })
-  @ApiConflictResponse({ description: 'Email already registered' })
+  @ApiConflictResponse({
+    description: 'Email or bank account already registered',
+  })
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() request: UpdateOwnerRequest,
   ): Promise<OwnerResponse> {
     const command = OwnerHttpMapper.fromUpdateRequestToCommand(request);
-    const owner = await this.ownerService.update(id, command);
-    return OwnerHttpMapper.fromDomainToResponse(owner);
-  }
-
-  @Patch(':id/deposit')
-  @ApiOperation({ summary: 'Deposit money into an owner account' })
-  @ApiParam({ name: 'id', description: 'Owner identifier', format: 'uuid' })
-  @ApiBody({ type: AmountRequest })
-  @ApiOkResponse({
-    description: 'Deposit applied and owner returned',
-    type: OwnerResponse,
-  })
-  @ApiBadRequestResponse({ description: 'Invalid amount' })
-  @ApiConflictResponse({
-    description: 'The balance exceeds the maximum allowed',
-  })
-  @ApiNotFoundResponse({ description: 'Owner not found' })
-  async deposit(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() request: AmountRequest,
-  ): Promise<OwnerResponse> {
-    const owner = await this.ownerService.deposit(id, request.amount);
-    return OwnerHttpMapper.fromDomainToResponse(owner);
-  }
-
-  @Patch(':id/withdraw')
-  @ApiOperation({ summary: 'Withdraw money from an owner account' })
-  @ApiParam({ name: 'id', description: 'Owner identifier', format: 'uuid' })
-  @ApiBody({ type: AmountRequest })
-  @ApiOkResponse({
-    description: 'Withdrawal applied and owner returned',
-    type: OwnerResponse,
-  })
-  @ApiBadRequestResponse({ description: 'Invalid amount' })
-  @ApiConflictResponse({ description: 'Insufficient balance' })
-  @ApiNotFoundResponse({ description: 'Owner not found' })
-  async withdraw(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() request: AmountRequest,
-  ): Promise<OwnerResponse> {
-    const owner = await this.ownerService.withdraw(id, request.amount);
+    const owner = await this.updateOwner.execute(id, command);
     return OwnerHttpMapper.fromDomainToResponse(owner);
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete an owner' })
+  @ApiOperation({
+    summary:
+      'Delete an owner with its properties and transactions (the administrator balance is kept)',
+  })
   @ApiParam({ name: 'id', description: 'Owner identifier', format: 'uuid' })
   @ApiOkResponse({ description: 'Owner deleted' })
   @ApiNotFoundResponse({ description: 'Owner not found' })
-  @ApiConflictResponse({ description: 'Owner has properties' })
+  @ApiConflictResponse({
+    description: 'A property of the owner has active or upcoming rentals',
+  })
   async delete(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
-    const deleted = await this.ownerService.delete(id);
-    if (!deleted) {
-      throw new NotFoundException(`Owner with id ${id} not found`);
-    }
+    await this.deleteOwner.execute(id);
   }
 }

@@ -9,7 +9,7 @@ import {
 } from '../dto/response/client.response.js';
 import { CreateClientRequest } from '../dto/request/create/create-client.request.js';
 import { UpdateClientRequest } from '../dto/request/update/update-client.request.js';
-import { normalizeEmail, trimText } from './mapping.utils.js';
+import { trimText } from './mapping.utils.js';
 
 export class ClientHttpMapper {
   static fromCreateRequestToCommand(
@@ -18,7 +18,7 @@ export class ClientHttpMapper {
     return {
       name: trimText(request.name),
       phone: trimText(request.phone),
-      email: normalizeEmail(request.email),
+      email: request.email,
       cityId: request.cityId,
       bankId: request.bankId,
       accountNumber: trimText(request.accountNumber),
@@ -33,7 +33,7 @@ export class ClientHttpMapper {
     return {
       name: trimText(request.name),
       phone: trimText(request.phone),
-      email: normalizeEmail(request.email),
+      email: request.email,
       cityId: request.cityId,
       bankId: request.bankId,
       accountNumber: trimText(request.accountNumber),

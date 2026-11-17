@@ -14,7 +14,7 @@ import { decimalTransformer } from '@/infrastructure/persistence/entities/decima
 import { OwnerEntity } from '@/infrastructure/persistence/entities/owner.entity.js';
 
 // Junction table administrator ↔ owner: one row per money movement.
-// Rows are only inserted, never updated or deleted.
+// Rows are never updated; they are deleted only together with their owner.
 @Entity({ name: 'administrator_owner_transactions' })
 @Check('CHK_aot_type', "type IN ('PAYMENT', 'REFUND')")
 @Check(

@@ -8,9 +8,7 @@ import { AdministratorTransactionEntity } from '@/infrastructure/persistence/ent
 import { AdministratorTransactionMapper } from '@/infrastructure/persistence/mapper/administrator-transaction-mapper.js';
 import { UUID } from '@/utils/types.js';
 
-export class AdministratorTransactionRepositoryTypeORM
-  implements AdministratorTransactionRepository
-{
+export class AdministratorTransactionRepositoryTypeORM implements AdministratorTransactionRepository {
   private readonly repository: Repository<AdministratorTransactionEntity>;
 
   constructor(private readonly manager: EntityManager) {
@@ -62,5 +60,9 @@ export class AdministratorTransactionRepositoryTypeORM
       AdministratorTransactionMapper.fromDomainToEntity(transaction),
     );
     return transaction;
+  }
+
+  async deleteByOwnerId(ownerId: UUID): Promise<void> {
+    await this.repository.delete({ ownerId });
   }
 }

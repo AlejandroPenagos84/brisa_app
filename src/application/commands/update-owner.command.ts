@@ -5,4 +5,6 @@ export interface UpdateOwnerCommand {
   phone?: string;
   email?: string;
   bankId?: UUID;
+  accountNumber?: string;
+  accountType?: string;
 }

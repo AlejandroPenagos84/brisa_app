@@ -1,5 +1,5 @@
 import { NotFoundError } from '@/application/errors/application-error.js';
-import { EntityManager, MoreThanOrEqual, Repository } from 'typeorm';
+import { EntityManager, In, MoreThanOrEqual, Repository } from 'typeorm';
 import { RentalRepository } from '@/application/ports/out/repositories/rental-repository.js';
 import { Rental, RentalKey } from '@/domain/rental.js';
 import { RentalEntity } from '@/infrastructure/persistence/entities/rental.entity.js';
@@ -54,6 +54,19 @@ export class RentalRepositoryTypeORM implements RentalRepository {
   async findCurrentByClientId(clientId: UUID, today: Date): Promise<Rental[]> {
     const entities = await this.repository.findBy({
       clientId,
+      checkOutDate: MoreThanOrEqual(RentalMapper.toDateColumn(today)),
+    });
+    return entities.map((entity) => RentalMapper.fromEntityToDomain(entity));
+  }
+
+  async findCurrentByPropertyIds(
+    propertyIds: UUID[],
+    today: Date,
+  ): Promise<Rental[]> {
+    if (propertyIds.length === 0) return [];
+
+    const entities = await this.repository.findBy({
+      propertyId: In(propertyIds),
       checkOutDate: MoreThanOrEqual(RentalMapper.toDateColumn(today)),
     });
     return entities.map((entity) => RentalMapper.fromEntityToDomain(entity));

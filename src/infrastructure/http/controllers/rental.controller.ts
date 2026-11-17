@@ -1,19 +1,13 @@
 import {
-  Body,
   Controller,
-  Delete,
   Get,
   NotFoundException,
   Param,
   ParseDatePipe,
   ParseUUIDPipe,
-  Post,
   Query,
 } from '@nestjs/common';
 import {
-  ApiBadRequestResponse,
-  ApiConflictResponse,
-  ApiCreatedResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -22,13 +16,11 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { RentalService } from '@/application/services/rental-service.js';
-import { CreateRentalRequest } from '../dto/request/create/create-rental.request.js';
-import {
-  RentalResponse,
-  RentalDetailsResponse,
-} from '../dto/response/rental.response.js';
+import { RentalDetailsResponse } from '../dto/response/rental.response.js';
 import { RentalHttpMapper } from '../mappers/rental-http.mapper.js';
 
+// Reads only. Reserving and cancelling are done by the client:
+// ClientRentalController (/clients/:clientId/rentals)
 @ApiTags('Rentals')
 @Controller('rentals')
 export class RentalController {
@@ -53,9 +45,7 @@ export class RentalController {
       ? await this.rentalService.findByClientId(clientId)
       : await this.rentalService.findAll();
 
-    return rentals.map((item) =>
-      RentalHttpMapper.fromDetailsToResponse(item),
-    );
+    return rentals.map((item) => RentalHttpMapper.fromDetailsToResponse(item));
   }
 
   @Get('client/:clientId')
@@ -74,9 +64,7 @@ export class RentalController {
   ): Promise<RentalDetailsResponse[]> {
     const rentals = await this.rentalService.findByClientId(clientId);
 
-    return rentals.map((item) =>
-      RentalHttpMapper.fromDetailsToResponse(item),
-    );
+    return rentals.map((item) => RentalHttpMapper.fromDetailsToResponse(item));
   }
 
   @Get(':propertyId/:clientId/:startDate')
@@ -118,60 +106,5 @@ export class RentalController {
     }
 
     return RentalHttpMapper.fromDetailsToResponse(details);
-  }
-
-  @Delete(':propertyId/:clientId/:startDate')
-  @ApiOperation({
-    summary: 'Cancel a rental: the owner refunds the charged amount to the client',
-  })
-  @ApiParam({
-    name: 'propertyId',
-    description: 'Rented property identifier',
-    format: 'uuid',
-  })
-  @ApiParam({
-    name: 'clientId',
-    description: 'Client identifier',
-    format: 'uuid',
-  })
-  @ApiParam({
-    name: 'startDate',
-    description: 'Rental start date',
-    example: '2026-11-10',
-    format: 'date',
-  })
-  @ApiOkResponse({
-    description: 'Rental cancelled and charged amount refunded',
-  })
-  @ApiNotFoundResponse({ description: 'Rental not found' })
-  @ApiConflictResponse({
-    description:
-      'The rental has already started, has no charged amount, or the owner balance is not enough to refund it',
-  })
-  async cancel(
-    @Param('propertyId', ParseUUIDPipe) propertyId: string,
-    @Param('clientId', ParseUUIDPipe) clientId: string,
-    @Param('startDate', new ParseDatePipe()) startDate: Date,
-  ): Promise<void> {
-    await this.rentalService.cancel({ propertyId, clientId, startDate });
-  }
-
-  @Post()
-  @ApiOperation({
-    summary: 'Create a rental: the client pays and the owner receives the amount',
-  })
-  @ApiCreatedResponse({ description: 'Rental created', type: RentalResponse })
-  @ApiBadRequestResponse({
-    description: 'Invalid rental dates or data',
-  })
-  @ApiNotFoundResponse({ description: 'Client or property not found' })
-  @ApiConflictResponse({
-    description:
-      'The rental already exists, the property is inactive, the dates overlap, the client has insufficient balance, or the owner balance would exceed the maximum',
-  })
-  async create(@Body() request: CreateRentalRequest): Promise<RentalResponse> {
-    const rental = RentalHttpMapper.fromCreateRequestToDomain(request);
-    const saved = await this.rentalService.save(rental);
-    return RentalHttpMapper.fromDomainToResponse(saved);
   }
 }

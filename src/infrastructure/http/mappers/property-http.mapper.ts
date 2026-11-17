@@ -8,21 +8,22 @@ import {
   PropertyDetailsResponse,
 } from '../dto/response/property.response.js';
 import { UpdatePropertyRequest } from '../dto/request/update/update-property.request.js';
-import { trimText } from './mapping.utils.js';
 import { OwnerHttpMapper } from './owner-http.mapper.js';
 
+// The API keeps the field "price"; the domain calls it pricePerNight
 export class PropertyHttpMapper {
   static fromCreateRequestToCommand(
+    ownerId: string,
     request: CreatePropertyRequest,
   ): CreatePropertyCommand {
     return {
-      ownerId: request.ownerId,
+      ownerId,
       cityId: request.cityId,
-      address: trimText(request.address),
+      address: request.address,
       area: request.area,
       numberOfRooms: request.numberOfRooms,
       capacity: request.capacity,
-      price: request.price,
+      pricePerNight: request.price,
     };
   }
 
@@ -30,11 +31,11 @@ export class PropertyHttpMapper {
     request: UpdatePropertyRequest,
   ): UpdatePropertyCommand {
     return {
-      address: trimText(request.address),
+      address: request.address,
       area: request.area,
       numberOfRooms: request.numberOfRooms,
       capacity: request.capacity,
-      price: request.price,
+      pricePerNight: request.price,
       status: request.status,
     };
   }
@@ -49,7 +50,7 @@ export class PropertyHttpMapper {
       area: data.area,
       numberOfRooms: data.numberOfRooms,
       capacity: data.capacity,
-      price: data.price,
+      price: data.pricePerNight,
       status: data.status,
     };
   }
@@ -60,7 +61,10 @@ export class PropertyHttpMapper {
     const { property, owner, ownerBank, city } = details;
     return {
       ...this.fromDomainToResponse(property),
-      owner: OwnerHttpMapper.fromDomainWithBankToPublicResponse(owner, ownerBank),
+      owner: OwnerHttpMapper.fromDomainWithBankToPublicResponse(
+        owner,
+        ownerBank,
+      ),
       city: { id: city.getId(), name: city.getName() },
     };
   }

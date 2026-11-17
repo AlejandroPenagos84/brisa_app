@@ -7,5 +7,5 @@ export interface CreatePropertyCommand {
   area: number;
   numberOfRooms: number;
   capacity: number;
-  price: number;
+  pricePerNight: number;
 }

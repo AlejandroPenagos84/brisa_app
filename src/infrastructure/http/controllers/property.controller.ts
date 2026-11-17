@@ -1,19 +1,12 @@
 import {
-  Body,
   Controller,
-  Delete,
   Get,
   NotFoundException,
   Param,
   ParseUUIDPipe,
-  Patch,
-  Post,
   Query,
 } from '@nestjs/common';
 import {
-  ApiBadRequestResponse,
-  ApiConflictResponse,
-  ApiCreatedResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -21,15 +14,12 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { PropertyService } from '@/application/services/property-service.js';
-import {
-  PropertyResponse,
-  PropertyDetailsResponse,
-} from '../dto/response/property.response.js';
-import { CreatePropertyRequest } from '../dto/request/create/create-property.request.js';
+import { PropertyDetailsResponse } from '../dto/response/property.response.js';
 import { PropertyFiltersRequest } from '../dto/request/query/property-filters.request.js';
-import { UpdatePropertyRequest } from '../dto/request/update/update-property.request.js';
 import { PropertyHttpMapper } from '../mappers/property-http.mapper.js';
 
+// Reads only. Creating, editing and deleting a property is done by its
+// owner: OwnerPropertyController (/owners/:ownerId/properties)
 @ApiTags('Properties')
 @Controller('properties')
 export class PropertyController {
@@ -101,59 +91,5 @@ export class PropertyController {
       throw new NotFoundException(`Property with id ${id} not found`);
     }
     return PropertyHttpMapper.fromDetailsToResponse(details);
-  }
-
-  @Post()
-  @ApiOperation({ summary: 'Create a property' })
-  @ApiCreatedResponse({
-    description: 'Property created',
-    type: PropertyResponse,
-  })
-  @ApiBadRequestResponse({ description: 'Invalid property data' })
-  @ApiNotFoundResponse({ description: 'Owner or city not found' })
-  async create(
-    @Body() request: CreatePropertyRequest,
-  ): Promise<PropertyResponse> {
-    const command = PropertyHttpMapper.fromCreateRequestToCommand(request);
-    const saved = await this.propertyService.create(command);
-    return PropertyHttpMapper.fromDomainToResponse(saved);
-  }
-
-  @Patch(':id')
-  @ApiOperation({ summary: 'Update a property' })
-  @ApiParam({
-    name: 'id',
-    description: 'Property identifier',
-    format: 'uuid',
-  })
-  @ApiOkResponse({ description: 'Property updated', type: PropertyResponse })
-  @ApiBadRequestResponse({ description: 'Invalid property data' })
-  @ApiNotFoundResponse({ description: 'Property not found' })
-  @ApiConflictResponse({
-    description: 'Property has active or upcoming rentals and cannot be activated',
-  })
-  async update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() request: UpdatePropertyRequest,
-  ): Promise<PropertyResponse> {
-    const command = PropertyHttpMapper.fromUpdateRequestToCommand(request);
-    const updated = await this.propertyService.update(id, command);
-    return PropertyHttpMapper.fromDomainToResponse(updated);
-  }
-
-  @Delete(':id')
-  @ApiOperation({ summary: 'Delete a property' })
-  @ApiParam({
-    name: 'id',
-    description: 'Property identifier',
-    format: 'uuid',
-  })
-  @ApiOkResponse({ description: 'Property deleted with its past rentals' })
-  @ApiNotFoundResponse({ description: 'Property not found' })
-  @ApiConflictResponse({
-    description: 'Property has active or upcoming rentals',
-  })
-  async delete(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
-    await this.propertyService.delete(id);
   }
 }

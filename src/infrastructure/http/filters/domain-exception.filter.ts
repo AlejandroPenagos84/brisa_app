@@ -1,4 +1,9 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpStatus } from '@nestjs/common';
+import {
+  ArgumentsHost,
+  Catch,
+  ExceptionFilter,
+  HttpStatus,
+} from '@nestjs/common';
 import type { Response } from 'express';
 import { DomainError } from '@/domain/errors/domain-error.js';
 import { DomainErrorCode } from '@/domain/errors/domain-error-codes.js';
@@ -11,19 +16,36 @@ export interface DomainErrorResponse {
 
 // Rules that depend on the current state of the aggregate, not on the input
 // alone. Any other domain error is an invalid input (400).
-const CONFLICT_CODES: ReadonlySet<DomainErrorCode> = new Set([
+const CONFLICT_CODES: ReadonlySet<DomainErrorCode> = new Set<DomainErrorCode>([
   DomainErrorCode.INSUFFICIENT_BALANCE,
   DomainErrorCode.BALANCE_LIMIT_EXCEEDED,
-  DomainErrorCode.PROPERTY_ALREADY_ACTIVE,
-  DomainErrorCode.PROPERTY_ALREADY_INACTIVE,
+  DomainErrorCode.CLIENT_HAS_OVERLAPPING_RENTAL,
+  DomainErrorCode.CLIENT_HAS_ACTIVE_RENTALS,
+  DomainErrorCode.OWNER_HAS_ACTIVE_RENTALS,
+  DomainErrorCode.PROPERTY_NOT_AVAILABLE,
+  DomainErrorCode.PROPERTY_HAS_ACTIVE_RENTALS,
+  DomainErrorCode.RENTAL_ALREADY_STARTED,
+  DomainErrorCode.RENTAL_HAS_NO_COST,
+  DomainErrorCode.PAYMENT_BANK_MISMATCH,
 ]);
 
-export function mapDomainError(error: DomainError): DomainErrorResponse {
-  const statusCode = CONFLICT_CODES.has(error.code)
-    ? HttpStatus.CONFLICT
-    : HttpStatus.BAD_REQUEST;
+// The rule is about who makes the request, not about the state
+const FORBIDDEN_CODES: ReadonlySet<DomainErrorCode> = new Set<DomainErrorCode>([
+  DomainErrorCode.PROPERTY_NOT_OWNED,
+]);
 
-  return { statusCode, code: error.code, message: error.message };
+function statusFor(code: DomainErrorCode): HttpStatus {
+  if (FORBIDDEN_CODES.has(code)) return HttpStatus.FORBIDDEN;
+  if (CONFLICT_CODES.has(code)) return HttpStatus.CONFLICT;
+  return HttpStatus.BAD_REQUEST;
+}
+
+export function mapDomainError(error: DomainError): DomainErrorResponse {
+  return {
+    statusCode: statusFor(error.code),
+    code: error.code,
+    message: error.message,
+  };
 }
 
 @Catch(DomainError)

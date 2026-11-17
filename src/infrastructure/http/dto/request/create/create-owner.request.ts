@@ -3,14 +3,12 @@ import {
   IsEmail,
   IsNotEmpty,
   IsString,
-  IsNumber,
   IsUUID,
-  Max,
   MaxLength,
-  Min,
 } from 'class-validator';
 
 // Body received from the frontend. Max lengths match the owners table.
+// There is no initial balance: it only changes through rental payments.
 export class CreateOwnerRequest {
   @ApiProperty({
     description: 'Owner full name',
@@ -51,14 +49,23 @@ export class CreateOwnerRequest {
   bankId: string;
 
   @ApiProperty({
-    description: 'Initial balance',
-    example: 0,
-    default: 0,
-    minimum: 0,
-    maximum: 9_999_999_999.99,
+    description:
+      'Owner bank account number, where the owner receives the payments',
+    example: '5001001001',
+    maxLength: 30,
   })
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  @Max(9_999_999_999.99)
-  balance: number = 0;
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(30)
+  accountNumber: string;
+
+  @ApiProperty({
+    description: 'Owner bank account type',
+    example: 'Ahorros',
+    maxLength: 50,
+  })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(50)
+  accountType: string;
 }

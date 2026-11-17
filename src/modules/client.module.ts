@@ -5,6 +5,9 @@ import {
   type ClientRepository,
 } from '@/application/ports/out/repositories/client-repository.js';
 import { ClientService } from '@/application/services/client-service.js';
+import { UpdateClientUseCase } from '@/application/use-cases/update-client.use-case.js';
+import { CLOCK, type Clock } from '@/application/ports/out/clock.js';
+import { ClockModule } from './clock.module.js';
 import { ClientController } from '@/infrastructure/http/controllers/client.controller.js';
 import { ClientRepositoryTypeORM } from '@/infrastructure/persistence/repositories_impl/client-repository-typeorm.js';
 import { CityModule } from './city.module.js';
@@ -29,7 +32,13 @@ import {
 } from '@/application/ports/out/repositories/unit-of-work.js';
 
 @Module({
-  imports: [CityModule, BankModule, CountryModule, UnitOfWorkModule],
+  imports: [
+    CityModule,
+    BankModule,
+    CountryModule,
+    ClockModule,
+    UnitOfWorkModule,
+  ],
   controllers: [ClientController],
   providers: [
     {
@@ -46,6 +55,7 @@ import {
         bankRepository: BankRepository,
         countryRepository: CountryRepository,
         unitOfWork: UnitOfWork,
+        clock: Clock,
       ) =>
         new ClientService(
           clientRepository,
@@ -53,6 +63,7 @@ import {
           bankRepository,
           countryRepository,
           unitOfWork,
+          clock,
         ),
       inject: [
         CLIENT_REPOSITORY,
@@ -60,7 +71,22 @@ import {
         BANK_REPOSITORY,
         COUNTRY_REPOSITORY,
         UNIT_OF_WORK,
+        CLOCK,
       ],
+    },
+    {
+      provide: UpdateClientUseCase,
+      useFactory: (
+        clientRepository: ClientRepository,
+        cityRepository: CityRepository,
+        bankRepository: BankRepository,
+      ) =>
+        new UpdateClientUseCase(
+          clientRepository,
+          cityRepository,
+          bankRepository,
+        ),
+      inject: [CLIENT_REPOSITORY, CITY_REPOSITORY, BANK_REPOSITORY],
     },
   ],
   exports: [CLIENT_REPOSITORY, ClientService],

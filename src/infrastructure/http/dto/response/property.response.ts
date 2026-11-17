@@ -36,7 +36,7 @@ export class PropertyResponse {
   @ApiProperty({ description: 'Maximum number of guests', example: 6 })
   capacity: number;
 
-  @ApiProperty({ description: 'Monthly rental price', example: 1500.5 })
+  @ApiProperty({ description: 'Price per night', example: 1500.5 })
   price: number;
 
   @ApiProperty({
@@ -51,6 +51,9 @@ export class PropertyDetailsResponse extends PropertyResponse {
   @ApiProperty({ description: 'Property owner', type: OwnerResponse })
   owner: OwnerResponse;
 
-  @ApiProperty({ description: 'City where the property is located', type: CitySummaryResponse })
+  @ApiProperty({
+    description: 'City where the property is located',
+    type: CitySummaryResponse,
+  })
   city: CitySummaryResponse;
 }

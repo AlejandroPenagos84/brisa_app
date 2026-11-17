@@ -4,12 +4,6 @@ export function trimText(value: string | undefined): string | undefined {
   return typeof value === 'string' ? value.trim() : value;
 }
 
-export function normalizeEmail(value: string): string;
-export function normalizeEmail(value: string | undefined): string | undefined;
-export function normalizeEmail(value: string | undefined): string | undefined {
-  return typeof value === 'string' ? value.trim().toLowerCase() : value;
-}
-
 export function toDate(value: string): Date;
 export function toDate(value: string | undefined): Date | undefined;
 export function toDate(value: string | undefined): Date | undefined {

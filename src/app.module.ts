@@ -11,6 +11,7 @@ import { CityModule } from './modules/city.module.js';
 import { PropertyModule } from './modules/property.module.js';
 import { ClientModule } from './modules/client.module.js';
 import { RentalModule } from './modules/rental.module.js';
+import { AdministratorModule } from './modules/administrator.module.js';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { RentalModule } from './modules/rental.module.js';
     CountryModule,
     CityModule,
     BankModule,
+    AdministratorModule,
     OwnerModule,
     PropertyModule,
     ClientModule,
