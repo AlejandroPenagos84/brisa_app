@@ -119,7 +119,7 @@ export function RegisterModal({ draft }: RegisterModalProps) {
           />
         ) : null}
         <TextField
-          label="Contraseña de la demo"
+          label="Contraseña"
           name="password"
           type="password"
           value={form.password}
@@ -128,10 +128,7 @@ export function RegisterModal({ draft }: RegisterModalProps) {
           autoComplete="new-password"
           onChange={(event) => update({ password: event.target.value })}
         />
-        <small>
-          Brisa no tiene autenticación real: esta contraseña se guarda solo en
-          este navegador.
-        </small>
+        <small>Usa al menos 6 caracteres.</small>
         {error ? <p className="error">{error}</p> : null}
         <Button variant="primary" full type="submit">
           Continuar

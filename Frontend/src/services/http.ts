@@ -1,11 +1,9 @@
+import { translateApiError, type ApiErrorBody } from './errors'
+
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/+$/, '')
 
 interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: unknown
-}
-
-interface ErrorBody {
-  message?: string | string[]
 }
 
 export async function request<T>(
@@ -30,17 +28,15 @@ export async function request<T>(
   }
 
   if (!response.ok) {
-    let message = `La solicitud falló con estado ${response.status}`
+    let body: ApiErrorBody | null = null
 
     try {
-      const error = (await response.json()) as ErrorBody
-      if (Array.isArray(error.message)) message = error.message.join('. ')
-      else if (error.message) message = error.message
+      body = (await response.json()) as ApiErrorBody
     } catch {
-      message = `La solicitud falló con estado ${response.status}`
+      body = null
     }
 
-    throw new Error(message)
+    throw new Error(translateApiError(response.status, body))
   }
 
   const content = await response.text()

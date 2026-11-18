@@ -3,7 +3,7 @@ import { useBrisa } from '../context/BrisaContext'
 import { filterCatalog, today } from '../domain/brisa'
 import type { Filters, SearchForm } from '../types'
 import { Button } from '../components/ui/Button'
-import { TextField } from '../components/ui/Fields'
+import { StepperField, TextField } from '../components/ui/Fields'
 import { PropertyCard } from '../components/ui/PropertyCard'
 
 export function HomePage() {
@@ -99,17 +99,13 @@ export function HomePage() {
           min={searchForm.start || today()}
           onChange={(event) => updateForm({ end: event.target.value })}
         />
-        <TextField
+        <StepperField
           label="Huéspedes"
           name="guests"
-          type="number"
           value={searchForm.guests}
           min={1}
           max={30}
-          required
-          onChange={(event) =>
-            updateForm({ guests: Number(event.target.value) })
-          }
+          onChange={(guests) => updateForm({ guests })}
         />
         <Button type="submit" variant="primary">
           Buscar

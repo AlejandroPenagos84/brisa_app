@@ -34,7 +34,7 @@ export function WalletPage() {
           {account.balanceKnown ? (
             <h2>{money(account.balance)}</h2>
           ) : (
-            <p className="muted">Cuenta utilizada para los pagos simulados.</p>
+            <p className="muted">Cuenta utilizada para tus pagos y reembolsos.</p>
           )}
         </div>
       ))}

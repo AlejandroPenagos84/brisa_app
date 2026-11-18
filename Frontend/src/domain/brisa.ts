@@ -32,6 +32,20 @@ export function formatDate(value: string): string {
   }).format(new Date(`${value.slice(0, 10)}T12:00:00`))
 }
 
+export const ACCOUNT_NUMBER_PATTERN = /^\d{4}-\d{4}-\d{4}-\d{4}$/
+export const ACCOUNT_NUMBER_LENGTH = 19
+
+// Keeps only digits (max 16) and inserts a "-" every 4 digits:
+// "1234567890" -> "1234-5678-90"
+export function formatAccountNumber(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 16)
+  return digits.match(/.{1,4}/g)?.join('-') ?? ''
+}
+
+export function isValidAccountNumber(value: string): boolean {
+  return ACCOUNT_NUMBER_PATTERN.test(value)
+}
+
 export function createDefaultFilters(): Filters {
   return {
     q: '',
@@ -126,13 +140,18 @@ export function quoteFor(
   }
 }
 
+// Lowercase without accents, so "bogota" finds "Bogotá"
+function normalizeText(value: string): string {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+}
+
 export function filterCatalog(
   db: DbState,
   filters: Filters,
   userId?: string,
 ): Property[] {
   const user = db.users.find((candidate) => candidate.id === userId)
-  const query = filters.q.toLowerCase()
+  const query = normalizeText(filters.q.trim())
   const maxPrice = Number(filters.max)
   const guests = Number(filters.guests)
 
@@ -159,8 +178,11 @@ export function filterCatalog(
       return false
     }
 
-    const searchable =
-      `${property.address} ${property.location} ${property.description}`.toLowerCase()
+    const countryId = db.cities.find((city) => city.id === property.cityId)?.countryId
+    const country = db.countries.find((item) => item.id === countryId)?.name ?? ''
+    const searchable = normalizeText(
+      `${property.address} ${property.location} ${country} ${property.description}`,
+    )
 
     if (!searchable.includes(query)) {
       return false

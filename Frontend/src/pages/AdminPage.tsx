@@ -53,7 +53,7 @@ export function AdminPage() {
         <Button onClick={() => void refresh()} disabled={loading}>Recargar datos</Button>
       </div>
 
-      {loading ? <p className="muted">Cargando datos del backend...</p> : null}
+      {loading ? <p className="muted">Cargando datos...</p> : null}
       {error ? (
         <div className="notice">
           <strong>No se pudo actualizar el panel</strong>

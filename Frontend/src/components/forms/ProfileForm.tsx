@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useBrisa } from '../../context/BrisaContext'
+import { isValidAccountNumber } from '../../domain/brisa'
 import type { AccountInput, User } from '../../types'
 import { Button } from '../ui/Button'
 import { SelectField, TextField } from '../ui/Fields'
@@ -11,10 +12,11 @@ export function ProfileForm({ user, onClose }: { user: User; onClose: () => void
   const [phone, setPhone] = useState(user.phone)
   const [email, setEmail] = useState(user.email)
   const [cityId, setCityId] = useState(user.cityId ?? '')
+  const originalNumber = user.accounts[0]?.number ?? ''
   const [account, setAccount] = useState<AccountInput>(() => ({
     bankId: user.accounts[0]?.bankId ?? '',
     type: user.accounts[0]?.type ?? 'Ahorros',
-    number: user.accounts[0]?.number ?? '',
+    number: originalNumber,
   }))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -22,6 +24,13 @@ export function ProfileForm({ user, onClose }: { user: User; onClose: () => void
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
+
+    // Accounts registered before the format existed are kept unless changed
+    if (account.number !== originalNumber && !isValidAccountNumber(account.number)) {
+      setError('El número de cuenta debe tener el formato XXXX-XXXX-XXXX-XXXX')
+      return
+    }
+
     setSaving(true)
 
     try {
@@ -57,7 +66,11 @@ export function ProfileForm({ user, onClose }: { user: User; onClose: () => void
           options={db.cities.map((city) => ({ value: city.id, label: city.name }))}
           onChange={(event) => setCityId(event.target.value)} />
       ) : null}
-      <AccountFields value={account} onChange={(patch) => setAccount((current) => ({ ...current, ...patch }))} />
+      <AccountFields
+        value={account}
+        requireFormat={account.number !== originalNumber}
+        onChange={(patch) => setAccount((current) => ({ ...current, ...patch }))}
+      />
       {error ? <p className="error" role="alert">{error}</p> : null}
       <div className="row">
         <Button type="submit" variant="primary" disabled={saving}>

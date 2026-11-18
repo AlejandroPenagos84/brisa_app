@@ -5,7 +5,7 @@ import { money, quoteFor, today } from '../domain/brisa'
 import type { Quote } from '../types'
 import { Button } from '../components/ui/Button'
 import { Calendar } from '../components/ui/Calendar'
-import { TextField } from '../components/ui/Fields'
+import { StepperField, TextField } from '../components/ui/Fields'
 
 interface ReservationDraft {
   start: string
@@ -66,6 +66,8 @@ export function PropertyDetailPage() {
   }
 
   const propertyId = property.id
+  // The stepper keeps guests between 1 and the property capacity
+  const guests = Math.min(Math.max(draft.guests, 1), property.capacity)
   let quote: Quote | null = null
   let validationMessage = ''
 
@@ -75,7 +77,7 @@ export function PropertyDetailPage() {
       propertyId,
       draft.start,
       draft.end,
-      draft.guests,
+      guests,
     )
   } catch (caught) {
     if (draft.start && draft.end) {
@@ -107,7 +109,7 @@ export function PropertyDetailPage() {
         propertyId,
         draft.start,
         draft.end,
-        draft.guests,
+        guests,
       )
       setPendingQuote(nextQuote)
 
@@ -133,7 +135,10 @@ export function PropertyDetailPage() {
       <h1>{property.title}</h1>
       <p>
         {property.location} · {property.capacity}{' '}
-        huéspedes
+        {property.capacity === 1 ? 'huésped' : 'huéspedes'} ·{' '}
+        {property.numberOfRooms}{' '}
+        {property.numberOfRooms === 1 ? 'habitación' : 'habitaciones'} ·{' '}
+        {property.area} m²
       </p>
       <img
         id="hero"
@@ -216,17 +221,15 @@ export function PropertyDetailPage() {
                 }}
               />
             </div>
-            <TextField
+            <StepperField
               label="Huéspedes"
               name="guests"
-              type="number"
-              value={draft.guests}
+              value={guests}
               min={1}
               max={property.capacity}
-              required
-              onChange={(event) => {
+              onChange={(value) => {
                 setFormError('')
-                setDraft({ ...draft, guests: Number(event.target.value) })
+                setDraft({ ...draft, guests: value })
               }}
             />
             <Calendar

@@ -18,7 +18,7 @@ export function RegisterSuccessModal() {
         <h2>¡Registro exitoso!</h2>
         <p>Tu perfil y tu cuenta bancaria están listos.</p>
       </div>
-      <p>Ya tienes una sesión local iniciada en este navegador.</p>
+      <p>Ya iniciaste sesión con tu nueva cuenta.</p>
       <Button variant="primary" full onClick={continueToApp}>
         Continuar
       </Button>

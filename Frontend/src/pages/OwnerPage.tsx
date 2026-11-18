@@ -80,6 +80,13 @@ export function OwnerPage() {
               <p>
                 {property.location} · {money(property.price)} / noche
               </p>
+              <p className="muted small">
+                {property.numberOfRooms}{' '}
+                {property.numberOfRooms === 1 ? 'habitación' : 'habitaciones'} ·{' '}
+                {property.capacity}{' '}
+                {property.capacity === 1 ? 'huésped' : 'huéspedes'} ·{' '}
+                {property.area} m²
+              </p>
               <span className="badge">
                 {property.manuallyInactive ? 'Pausado' : isPropertyActive(db, property)
                   ? 'Con reservas'

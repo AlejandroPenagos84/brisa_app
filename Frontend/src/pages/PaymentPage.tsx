@@ -32,7 +32,7 @@ export function PaymentPage() {
     <>
       <h1>Confirma tu próxima escapada</h1>
       <p className="muted">
-        Revisa tu estancia y la cuenta con la que se simulará el pago.
+        Revisa tu estancia y la cuenta con la que se realizará el pago.
       </p>
       <div className="detail">
         <section className="panel">
@@ -45,7 +45,7 @@ export function PaymentPage() {
                   {account.number.slice(-4)}
                   <br />
                   <small>
-                    El cobro se simula en el backend y siempre se aprueba.
+                    El cobro se hará a esta cuenta al confirmar la reserva.
                   </small>
                 </span>
               </div>

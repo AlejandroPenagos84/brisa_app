@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useBrisa } from '../../context/BrisaContext'
 import { userLabel } from '../../domain/brisa'
 import { useAccountActions } from '../../hooks/useAccountActions'
 import { Button } from '../ui/Button'
 
 export function Header() {
-  const { user } = useBrisa()
+  const { user, filters, setFilters } = useBrisa()
   const {
     goHome,
     goFavorites,
@@ -20,10 +20,17 @@ export function Header() {
     openRegister,
   } = useAccountActions()
   const location = useLocation()
+  const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [query, setQuery] = useState(filters.q)
   const accountRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+
+  // Keep the box in sync when the home search or "Limpiar filtros" change it
+  useEffect(() => {
+    setQuery(filters.q)
+  }, [filters.q])
 
   useEffect(() => {
     setMenuOpen(false)
@@ -60,6 +67,20 @@ export function Header() {
     action()
   }
 
+  function applySearch(value: string) {
+    setFilters({ q: value.trim(), favorites: false })
+    if (location.pathname !== '/') navigate('/')
+  }
+
+  function handleSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    applySearch(query)
+    // Bring the results into view once the catalog renders
+    requestAnimationFrame(() =>
+      document.getElementById('results')?.scrollIntoView({ behavior: 'smooth' }),
+    )
+  }
+
   const avatar = user
     ? `${user.name.charAt(0)}${user.surname.charAt(0)}`
     : '○'
@@ -69,10 +90,23 @@ export function Header() {
       <button type="button" className="brand" onClick={goHome}>
         ≋ brisa
       </button>
-      <button type="button" className="pill" onClick={goHome}>
-        ¿A dónde quieres ir?{' '}
-        <span> · Cualquier semana · Huéspedes</span> ⌕
-      </button>
+      <form className="pill header-search" role="search" onSubmit={handleSearch}>
+        <input
+          type="search"
+          name="header-q"
+          aria-label="Buscar destino o palabra clave"
+          placeholder="¿A dónde quieres ir?"
+          value={query}
+          onChange={(event) => {
+            setQuery(event.target.value)
+            // Clearing the box with the native "x" also clears the results
+            if (!event.target.value && filters.q) applySearch('')
+          }}
+        />
+        <button type="submit" aria-label="Buscar">
+          ⌕
+        </button>
+      </form>
       <div id="user" ref={accountRef}>
         <div className="account-nav">
           <button
