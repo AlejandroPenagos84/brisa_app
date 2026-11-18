@@ -40,7 +40,7 @@ export function ConfirmPaymentModal({ total }: ConfirmPaymentModalProps) {
       <h2>Confirmar transacción</h2>
       <p>
         El costo total es {money(total)}. ¿Confirmas la transacción? El cobro
-        simulado será aprobado por el backend.
+        se hará a tu cuenta bancaria registrada.
       </p>
       {error ? <p className="error">{error}</p> : null}
       <Button

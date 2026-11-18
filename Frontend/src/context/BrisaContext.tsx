@@ -19,7 +19,11 @@ import {
   adaptReservation,
   adaptTransaction,
 } from '../domain/adapters'
-import { createDefaultFilters, findProperty } from '../domain/brisa'
+import {
+  createDefaultFilters,
+  findProperty,
+  isValidAccountNumber,
+} from '../domain/brisa'
 import { api, type ProfilePayload } from '../services/api'
 import type {
   AccountInput,
@@ -260,6 +264,10 @@ export function BrisaProvider({ children }: { children: ReactNode }) {
 
       if (!account.bankId || !account.number.trim()) {
         throw new Error('Revisa los datos de la cuenta bancaria')
+      }
+
+      if (!isValidAccountNumber(account.number.trim())) {
+        throw new Error('El número de cuenta debe tener el formato XXXX-XXXX-XXXX-XXXX')
       }
 
       if (data.role === 'cliente' && !data.cityId) {

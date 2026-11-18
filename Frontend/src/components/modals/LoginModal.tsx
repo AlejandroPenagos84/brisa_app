@@ -112,7 +112,7 @@ export function LoginModal({ next }: LoginModalProps) {
         ¿No tienes cuenta? Regístrate
       </Button>
       <details>
-        <summary>Cuentas para explorar la demo</summary>
+        <summary>Cuentas de acceso</summary>
         <p>
           Cliente: {DEMO_CREDENTIALS.client}
           <br />
@@ -122,10 +122,6 @@ export function LoginModal({ next }: LoginModalProps) {
           <br />
           Contraseña: {DEMO_CREDENTIALS.password}
         </p>
-        <small>
-          La autenticación es local: el backend no maneja usuarios ni
-          contraseñas.
-        </small>
       </details>
     </Dialog>
   )
