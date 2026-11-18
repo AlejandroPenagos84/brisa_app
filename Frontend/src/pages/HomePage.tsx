@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useBrisa } from '../context/BrisaContext'
-import { filterCatalog, PROPERTY_TYPES, today } from '../domain/brisa'
-import type { Filters, PropertyType, SearchForm } from '../types'
+import { filterCatalog, today } from '../domain/brisa'
+import type { Filters, SearchForm } from '../types'
 import { Button } from '../components/ui/Button'
 import { TextField } from '../components/ui/Fields'
 import { PropertyCard } from '../components/ui/PropertyCard'
@@ -13,6 +13,9 @@ export function HomePage() {
     filters,
     setFilters,
     resetFilters,
+    loading,
+    error,
+    refresh,
     showToast,
   } = useBrisa()
   const [searchForm, setSearchForm] = useState<SearchForm>({
@@ -35,10 +38,6 @@ export function HomePage() {
 
   function updateForm(patch: Partial<SearchForm>) {
     setSearchForm((current) => ({ ...current, ...patch }))
-  }
-
-  function changeFilter(patch: Partial<Filters>) {
-    setFilters({ ...searchForm, ...patch })
   }
 
   function handleSearch(event: FormEvent<HTMLFormElement>) {
@@ -106,7 +105,7 @@ export function HomePage() {
           type="number"
           value={searchForm.guests}
           min={1}
-          max={20}
+          max={30}
           required
           onChange={(event) =>
             updateForm({ guests: Number(event.target.value) })
@@ -119,18 +118,18 @@ export function HomePage() {
 
       <div className="row filters">
         <label>
-          Tipo de inmueble
+          Ciudad
           <select
-            id="filter-type"
-            value={filters.type}
+            id="filter-city"
+            value={filters.cityId}
             onChange={(event) =>
-              changeFilter({ type: event.target.value as PropertyType | '' })
+              setFilters({ cityId: event.target.value })
             }
           >
-            <option value="">Todos</option>
-            {PROPERTY_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {type}
+            <option value="">Todas</option>
+            {db.cities.map((city) => (
+              <option key={city.id} value={city.id}>
+                {city.name}
               </option>
             ))}
           </select>
@@ -143,7 +142,7 @@ export function HomePage() {
             min={0}
             value={filters.max}
             placeholder="Sin límite"
-            onChange={(event) => changeFilter({ max: event.target.value })}
+            onChange={(event) => setFilters({ max: event.target.value })}
           />
         </label>
         <label>
@@ -170,10 +169,20 @@ export function HomePage() {
         <div>
           <h2>Estancias que inspiran</h2>
           <p className="muted small">
-            {list.length} espacios para tu próxima escapada
+            {loading
+              ? 'Cargando inmuebles...'
+              : `${list.length} espacios para tu próxima escapada`}
           </p>
         </div>
       </div>
+
+      {error ? (
+        <div className="notice">
+          <strong>No se pudo cargar el catálogo</strong>
+          <p>{error}</p>
+          <Button onClick={() => void refresh()}>Reintentar</Button>
+        </div>
+      ) : null}
 
       <div className="grid" id="results">
         {list.map((property) => (
@@ -181,7 +190,7 @@ export function HomePage() {
         ))}
       </div>
 
-      {!list.length ? (
+      {!loading && !error && !list.length ? (
         <div className="empty">
           <h2>⌕</h2>
           <h2>No hay inmuebles que coincidan con tu búsqueda</h2>

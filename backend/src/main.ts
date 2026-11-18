@@ -11,6 +11,13 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const { httpAdapter } = app.get(HttpAdapterHost);
 
+  const frontendOrigins = process.env.FRONTEND_ORIGINS;
+  app.enableCors({
+    origin: frontendOrigins
+      ? frontendOrigins.split(',').map((origin) => origin.trim())
+      : /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/,
+  });
+
   app.useGlobalFilters(
     new DatabaseExceptionFilter(httpAdapter),
     new DomainExceptionFilter(),

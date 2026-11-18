@@ -24,12 +24,11 @@ export function PropertyDetailPage() {
     requireLogin,
     setPendingQuote,
   } = useBrisa()
-  const propertyId = Number(id)
   const property = db.properties.find(
-    (candidate) => candidate.id === propertyId,
+    (candidate) => candidate.id === id,
   )
   const [draft, setDraft] = useState<ReservationDraft>(() =>
-    pendingQuote?.property === propertyId
+    pendingQuote && pendingQuote.property === id
       ? {
           start: pendingQuote.start,
           end: pendingQuote.end,
@@ -46,7 +45,7 @@ export function PropertyDetailPage() {
 
   useEffect(() => {
     setDraft(
-      pendingQuote?.property === propertyId
+      pendingQuote && pendingQuote.property === id
         ? {
             start: pendingQuote.start,
             end: pendingQuote.end,
@@ -60,19 +59,20 @@ export function PropertyDetailPage() {
     )
     setHeroPhoto(property?.photos[0] ?? '')
     setFormError('')
-  }, [propertyId])
+  }, [id])
 
-  if (!property || !property.active) {
+  if (!property) {
     return <h2>Este inmueble no está disponible</h2>
   }
 
+  const propertyId = property.id
   let quote: Quote | null = null
   let validationMessage = ''
 
   try {
     quote = quoteFor(
       db,
-      property.id,
+      propertyId,
       draft.start,
       draft.end,
       draft.guests,
@@ -86,7 +86,6 @@ export function PropertyDetailPage() {
 
   const errorMessage = formError || validationMessage
   const host = db.users.find((candidate) => candidate.id === property.owner)
-  const minStart = property.from > today() ? property.from : today()
 
   function selectDate(date: string) {
     setFormError('')
@@ -133,13 +132,13 @@ export function PropertyDetailPage() {
       </Button>
       <h1>{property.title}</h1>
       <p>
-        {property.location || property.address} · {property.capacity}{' '}
+        {property.location} · {property.capacity}{' '}
         huéspedes
       </p>
       <img
         id="hero"
         className="hero"
-        src={heroPhoto}
+        src={heroPhoto || property.photos[0]}
         alt={property.title}
       />
       <div className="gallery">
@@ -158,14 +157,25 @@ export function PropertyDetailPage() {
 
       <div className="detail">
         <section>
-          <h2>{property.type} · Tu próxima pausa</h2>
-          <p className="muted">Anfitrión: {host?.name || 'Anfitrión brisa'}</p>
-          <hr />
           <h2>Acerca de este espacio</h2>
+          <p className="muted">
+            Anfitrión: {host?.name || 'Anfitrión brisa'}
+          </p>
           <p>{property.description}</p>
           <hr />
           <h2>Ubicación</h2>
           <p>{property.address}</p>
+          {property.manuallyInactive ? (
+            <div className="notice">El anfitrión pausó las nuevas reservas.</div>
+          ) : property.status === 'INACTIVE' ? (
+            <div className="notice">
+              <strong>Este inmueble ya tiene reservas</strong>
+              <p>
+                Las fechas ocupadas están deshabilitadas. Puedes reservar
+                otras fechas disponibles.
+              </p>
+            </div>
+          ) : null}
           <div className="notice">
             <strong>Antes de reservar</strong>
             <p>
@@ -187,8 +197,7 @@ export function PropertyDetailPage() {
                 type="date"
                 value={draft.start}
                 required
-                min={minStart}
-                max={property.until}
+                min={today()}
                 onChange={(event) => {
                   setFormError('')
                   setDraft({ ...draft, start: event.target.value })
@@ -201,7 +210,6 @@ export function PropertyDetailPage() {
                 value={draft.end}
                 required
                 min={draft.start || today()}
-                max={property.until}
                 onChange={(event) => {
                   setFormError('')
                   setDraft({ ...draft, end: event.target.value })
@@ -250,6 +258,7 @@ export function PropertyDetailPage() {
               variant="primary"
               full
               className="booking-button"
+              disabled={property.manuallyInactive}
             >
               Reservar
             </Button>

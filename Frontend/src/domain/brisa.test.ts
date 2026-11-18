@@ -1,183 +1,127 @@
 import { describe, expect, it } from 'vitest'
-import { createSeedDb } from '../data/seed'
-import {
-  createUser,
-  depositToAccount,
-  filterCatalog,
-  isPropertyActive,
-  payForBooking,
-  publishProperty,
-  quoteFor,
-  removeProperty,
-  today,
-  createDefaultFilters,
-} from './brisa'
+import type { DbState } from '../types'
+import type { ApiRental, ApiReservation } from '../services/api'
+import { adaptProperty, adaptRental, adaptReservation } from './adapters'
+import { createDefaultFilters, filterCatalog, isPropertyActive, quoteFor, today } from './brisa'
 
 function addDays(date: string, days: number): string {
-  const next = new Date(`${date}T12:00:00`)
-  next.setDate(next.getDate() + days)
+  const next = new Date(date)
+  next.setUTCDate(next.getUTCDate() + days)
   return next.toISOString().slice(0, 10)
 }
 
-describe('brisa domain', () => {
-  it('crea los datos de demostración originales', () => {
-    const db = createSeedDb()
+const apiProperty = {
+  id: 'propiedad-1',
+  ownerId: 'propietario-1',
+  cityId: 'bogota',
+  city: { id: 'bogota', name: 'Bogotá' },
+  address: 'Calle 123',
+  area: 80.25,
+  numberOfRooms: 2,
+  capacity: 4,
+  price: 320_000.25,
+  status: 'ACTIVE' as const,
+  manuallyInactive: false,
+}
+const property = adaptProperty(apiProperty)
+const db: DbState = {
+  properties: [property],
+  bookings: [],
+  users: [],
+  cities: [],
+  countries: [],
+  banks: [],
+  administrator: null,
+  transactions: [],
+}
 
-    expect(db.users).toHaveLength(2)
-    expect(db.properties).toHaveLength(6)
-    expect(db.properties[0].title).toBe('Casa Oliva')
-    expect(db.properties[0].price).toBe(320000)
-    expect(db.bookings).toHaveLength(0)
-  })
+function rental(startDate: string, endDate: string): ApiRental {
+  return {
+    propertyId: property.id,
+    clientId: 'cliente-1',
+    startDate: `${startDate}T00:00:00.000Z`,
+    endDate: `${endDate}T00:00:00.000Z`,
+    status: 'UPCOMING',
+    chargedAmount: 500_000.50,
+    property: apiProperty,
+    client: {
+      id: 'cliente-1',
+      name: 'Sofía',
+      email: 'sofia@example.com',
+      phone: '3001234567',
+      cityId: 'bogota',
+      bankId: 'banco-1',
+      accountNumber: '2001',
+      accountType: 'Ahorros',
+    },
+  }
+}
 
-  it('calcula la cotización por noches', () => {
-    const db = createSeedDb()
-    const start = addDays(today(), 1)
-    const end = addDays(today(), 3)
-    const quote = quoteFor(db, 15, start, end, 2)
-
-    expect(quote.nights).toBe(2)
-    expect(quote.total).toBe(640000)
-    expect(quote.price).toBe(320000)
+describe('catálogo y reservas', () => {
+  it('calcula la cotización por noches y conserva los centavos', () => {
+    expect(quoteFor(db, property.id, addDays(today(), 1), addDays(today(), 3), 2))
+      .toMatchObject({ nights: 2, total: 640_000.50, price: apiProperty.price })
   })
 
   it('rechaza fechas y huéspedes inválidos', () => {
-    const db = createSeedDb()
-    const start = addDays(today(), 3)
-    const end = addDays(today(), 1)
+    const start = addDays(today(), 1)
+    const end = addDays(today(), 2)
 
-    expect(() => quoteFor(db, 15, start, end, 1)).toThrow(
-      'Selecciona y confirma tus fechas',
-    )
-    expect(() =>
-      quoteFor(db, 15, addDays(today(), 1), addDays(today(), 2), 8),
-    ).toThrow('Revisa la cantidad de huéspedes')
+    expect(() => quoteFor(db, property.id, end, start, 1))
+      .toThrow('Selecciona y confirma tus fechas')
+    expect(() => quoteFor(db, property.id, start, end, 8))
+      .toThrow('Revisa la cantidad de huéspedes')
   })
 
-  it('filtra por tipo, precio y texto', () => {
-    const db = createSeedDb()
+  it('filtra por ciudad, precio y texto', () => {
     const filters = createDefaultFilters()
 
-    expect(
-      filterCatalog(db, { ...filters, type: 'Loft' }).map(
-        (property) => property.title,
-      ),
-    ).toEqual(['Loft de la luz'])
-
-    expect(
-      filterCatalog(db, { ...filters, max: '300000' }),
-    ).toHaveLength(3)
-
-    expect(
-      filterCatalog(db, { ...filters, q: 'cartagena' })[0].title,
-    ).toBe('Casa de la brisa')
+    expect(filterCatalog(db, { ...filters, cityId: 'bogota', q: 'calle' })).toEqual([property])
+    expect(filterCatalog(db, { ...filters, cityId: 'medellin' })).toEqual([])
+    expect(filterCatalog(db, { ...filters, max: '320000' })).toEqual([])
   })
 
-  it('registra usuarios y valida duplicados', () => {
-    const db = createSeedDb()
-    const data = {
-      role: 'cliente' as const,
-      name: 'Laura',
-      surname: 'Gómez',
-      document: '10003',
-      phone: '3001234569',
-      email: 'laura@brisa.co',
-      password: 'Brisa123',
+  it('oculta los inmuebles pausados y conserva los que tienen reservas', () => {
+    const occupied = adaptProperty({ ...apiProperty, status: 'INACTIVE' })
+    const paused = adaptProperty({
+      ...apiProperty,
+      id: 'propiedad-2',
+      status: 'INACTIVE',
+      manuallyInactive: true,
+    })
+    const state = { ...db, properties: [occupied, paused] }
+
+    expect(filterCatalog(state, createDefaultFilters())).toEqual([occupied])
+    expect(() => quoteFor(state, paused.id, addDays(today(), 1), addDays(today(), 2)))
+      .toThrow('Este inmueble no está disponible')
+  })
+
+  it('rechaza solapamientos incluso cuando dos reservas comparten la fecha límite', () => {
+    const start = addDays(today(), 2)
+    const end = addDays(today(), 4)
+    const state = { ...db, bookings: [adaptRental(rental(start, end))] }
+
+    expect(isPropertyActive(state, property)).toBe(true)
+    expect(() => quoteFor(state, property.id, end, addDays(end, 1)))
+      .toThrow('Estas fechas no están disponibles')
+    expect(quoteFor(state, property.id, addDays(end, 1), addDays(end, 2)).nights).toBe(1)
+  })
+
+  it('muestra el importe guardado aunque haya cambiado la tarifa', () => {
+    const booking = adaptRental(rental('2026-11-19', '2026-11-21'), [property])
+    expect(booking).toMatchObject({ start: '2026-11-19', nights: 2, total: 500_000.50 })
+  })
+
+  it('interpreta el comprobante de reserva sin esperar los objetos de detalle', () => {
+    const { property: _property, client: _client, ...record } = rental('2026-11-19', '2026-11-21')
+    const payment: ApiReservation['payment'] = {
+      transactionId: 'pago-1',
+      status: 'APPROVED',
+      paidFromAccount: '****2001',
+      paidAt: '2026-11-17T23:00:00.000Z',
+      amount: record.chargedAmount,
     }
-    const account = {
-      bank: 'Bancolombia',
-      type: 'Ahorros' as const,
-      number: '1122334455',
-    }
-    const result = createUser(db, data, account)
-
-    expect(result.user.id).toBe(21)
-    expect(result.user.accounts[0].id).toBe(22)
-    expect(result.db.users).toHaveLength(3)
-    expect(() => createUser(result.db, data, account)).toThrow(
-      'Ya existe una cuenta con estos datos',
-    )
-  })
-
-  it('publica inmuebles y rechaza direcciones duplicadas', () => {
-    const db = createSeedDb()
-    const input = {
-      title: 'Casa del río',
-      address: 'Calle Nueva 1',
-      location: 'Bogotá',
-      type: 'Casa' as const,
-      description: 'Una casa para descansar junto al río.',
-      capacity: 2,
-      price: 300000,
-      photos: ['https://example.com/foto.jpg'],
-      from: today(),
-      until: addDays(today(), 30),
-    }
-
-    const created = publishProperty(db, 11, input)
-
-    expect(created.db.properties).toHaveLength(7)
-    expect(created.property.id).toBe(21)
-    expect(created.property.owner).toBe(11)
-    expect(() =>
-      publishProperty(created.db, 11, { ...input, title: 'Otra casa' }),
-    ).toThrow('Este inmueble ya está registrado')
-
-    const edited = publishProperty(
-      created.db,
-      11,
-      { ...input, title: 'Casa del río renovada' },
-      created.property.id,
-    )
-
-    expect(edited.property.title).toBe('Casa del río renovada')
-  })
-
-  it('impide quitar inmuebles con reservas y desactiva los disponibles', () => {
-    const db = createSeedDb()
-    const start = addDays(today(), 5)
-    const end = addDays(today(), 7)
-    const funded = depositToAccount(db, 13, 14, 1000000)
-    const quote = quoteFor(funded, 15, start, end, 2)
-    const booked = payForBooking(funded, 13, quote, 14).db
-
-    expect(() => removeProperty(booked, 11, 15)).toThrow(
-      'No puedes quitar este inmueble porque tiene reservas vigentes o futuras',
-    )
-
-    const updated = removeProperty(booked, 11, 16)
-
-    expect(
-      updated.properties.find((property) => property.id === 16)?.active,
-    ).toBe(false)
-  })
-
-  it('paga una reserva, actualiza saldos y bloquea solapamientos', () => {
-    const db = createSeedDb()
-    const start = addDays(today(), 5)
-    const end = addDays(today(), 7)
-    const funded = depositToAccount(db, 13, 14, 1000000)
-    const quote = quoteFor(funded, 15, start, end, 2)
-    const result = payForBooking(funded, 13, quote, 14)
-
-    expect(result.booking.total).toBe(640000)
-    expect(result.db.bookings).toHaveLength(1)
-    expect(
-      result.db.users.find((user) => user.id === 13)?.accounts[0].balance,
-    ).toBe(360000)
-    expect(
-      result.db.users.find((user) => user.id === 11)?.accounts[0].balance,
-    ).toBe(640000)
-
-    const bookedProperty = result.db.properties.find(
-      (property) => property.id === 15,
-    )
-
-    expect(bookedProperty && isPropertyActive(result.db, bookedProperty)).toBe(
-      true,
-    )
-    expect(() =>
-      quoteFor(result.db, 15, addDays(today(), 6), addDays(today(), 8), 1),
-    ).toThrow('Estas fechas no están disponibles')
+    expect(adaptReservation({ ...record, payment }, property))
+      .toMatchObject({ total: payment.amount, payment })
   })
 })

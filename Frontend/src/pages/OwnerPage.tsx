@@ -1,11 +1,15 @@
+import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useBrisa } from '../context/BrisaContext'
-import { isPropertyActive, money } from '../domain/brisa'
+import { formatDate, isPropertyActive, money, rentalStatusLabels } from '../domain/brisa'
+import type { Property } from '../types'
 import { Button } from '../components/ui/Button'
+import { OwnerEarnings } from '../components/ui/OwnerEarnings'
 
 export function OwnerPage() {
-  const { db, user, openModal } = useBrisa()
+  const { db, user, openModal, setPropertyStatus, showToast } = useBrisa()
   const navigate = useNavigate()
+  const [updating, setUpdating] = useState(false)
 
   if (!user) {
     return <Navigate to="/" replace />
@@ -16,7 +20,7 @@ export function OwnerPage() {
   }
 
   const properties = db.properties.filter(
-    (property) => property.owner === user.id && property.active,
+    (property) => property.owner === user.id,
   )
   const receivedBookings = db.bookings.filter(
     (booking) =>
@@ -24,7 +28,7 @@ export function OwnerPage() {
         ?.owner === user.id,
   )
 
-  function requestRemove(propertyId: number) {
+  function requestRemove(propertyId: string) {
     const property = db.properties.find(
       (candidate) => candidate.id === propertyId,
     )
@@ -35,6 +39,18 @@ export function OwnerPage() {
     }
 
     openModal({ type: 'remove-property', propertyId })
+  }
+
+  async function toggleAvailability(property: Property) {
+    setUpdating(true)
+    try {
+      await setPropertyStatus(property.id, property.manuallyInactive ? 'ACTIVE' : 'INACTIVE')
+      showToast(property.manuallyInactive ? 'Inmueble reactivado' : 'Nuevas reservas pausadas')
+    } catch (caught) {
+      showToast(caught instanceof Error ? caught.message : 'No se pudo actualizar el inmueble')
+    } finally {
+      setUpdating(false)
+    }
   }
 
   return (
@@ -61,9 +77,11 @@ export function OwnerPage() {
             <img src={property.photos[0]} alt={property.title} />
             <div>
               <h3>{property.title}</h3>
-              <p>{money(property.price)} / noche</p>
+              <p>
+                {property.location} · {money(property.price)} / noche
+              </p>
               <span className="badge">
-                {isPropertyActive(db, property)
+                {property.manuallyInactive ? 'Pausado' : isPropertyActive(db, property)
                   ? 'Con reservas'
                   : 'Disponible'}
               </span>
@@ -75,6 +93,10 @@ export function OwnerPage() {
                 }
               >
                 Modificar
+              </Button>
+              <Button disabled={updating || (property.manuallyInactive && isPropertyActive(db, property))}
+                onClick={() => void toggleAvailability(property)}>
+                {property.manuallyInactive ? 'Reactivar' : 'Pausar reservas'}
               </Button>
               <Button onClick={() => requestRemove(property.id)}>
                 Quitar de renta
@@ -101,13 +123,15 @@ export function OwnerPage() {
           <div className="notice" key={booking.id}>
             <strong>{booking.title}</strong>
             <p>
-              {booking.start} → {booking.end} · {money(booking.total)}
+              {formatDate(booking.start)} → {formatDate(booking.end)} · {money(booking.total)} ·{' '}
+              {rentalStatusLabels[booking.status]}
             </p>
           </div>
         ))
       ) : (
         <p className="muted">Aún no has recibido reservas.</p>
       )}
+      <OwnerEarnings key={user.id} ownerId={user.id} />
     </>
   )
 }

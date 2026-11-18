@@ -51,6 +51,7 @@ export class PropertyHttpMapper {
       capacity: data.capacity,
       price: data.pricePerNight,
       status: data.status,
+      manuallyInactive: property.isManuallyInactive(),
     };
   }
 

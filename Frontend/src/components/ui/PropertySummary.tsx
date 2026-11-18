@@ -1,4 +1,4 @@
-import { money } from '../../domain/brisa'
+import { formatDate, money } from '../../domain/brisa'
 import { useBrisa } from '../../context/BrisaContext'
 import type { Booking, Quote } from '../../types'
 
@@ -12,22 +12,20 @@ export function PropertySummary({ data }: PropertySummaryProps) {
     (candidate) => candidate.id === data.property,
   )
 
-  if (!property) return null
-
   const isBooking = 'title' in data
-  const title = isBooking ? data.title : property.title
-  const photo = isBooking ? data.photo : property.photos[0]
+  const title = isBooking ? data.title : property?.title ?? 'Alojamiento'
+  const photo = isBooking ? data.photo : property?.photos[0]
 
   return (
     <div className="summary">
-      <img src={photo} alt={title} />
+      {photo ? <img src={photo} alt={title} /> : null}
       <h3>{title}</h3>
       <p>
-        {data.start} → {data.end} · {data.guests} huéspedes
+        {formatDate(data.start)} → {formatDate(data.end)} · {data.nights}{' '}
+        {data.nights === 1 ? 'noche' : 'noches'}
+        {isBooking ? null : ` · ${data.guests} ${data.guests === 1 ? 'huésped' : 'huéspedes'}`}
       </p>
-      <p>
-        {money(data.price)} × {data.nights} noches
-      </p>
+      {isBooking ? null : <p>{money(data.price)} por noche</p>}
       <hr />
       <div className="row between">
         <strong>Total</strong>

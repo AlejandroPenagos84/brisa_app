@@ -6,18 +6,11 @@ import { Button } from '../components/ui/Button'
 import { PropertySummary } from '../components/ui/PropertySummary'
 
 export function PaymentPage() {
-  const {
-    user,
-    pendingQuote,
-    openModal,
-  } = useBrisa()
+  const { user, pendingQuote, openModal } = useBrisa()
   const navigate = useNavigate()
-  const [selectedAccount, setSelectedAccount] = useState<number | null>(
-    user?.accounts[0]?.id ?? null,
-  )
   const [error, setError] = useState('')
 
-  if (!user || !pendingQuote) {
+  if (user?.role !== 'cliente' || !pendingQuote) {
     return <Navigate to="/" replace />
   }
 
@@ -26,45 +19,36 @@ export function PaymentPage() {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    if (selectedAccount === null) {
-      setError('Selecciona una cuenta bancaria')
+    if (!user?.accounts.length) {
+      setError('No tienes una cuenta bancaria registrada')
       return
     }
 
     setError('')
-    openModal({
-      type: 'confirm-payment',
-      accountId: selectedAccount,
-      total: quote.total,
-    })
+    openModal({ type: 'confirm-payment', total: quote.total })
   }
 
   return (
     <>
       <h1>Confirma tu próxima escapada</h1>
       <p className="muted">
-        Revisa tu estancia y elige la cuenta con la que quieres pagar.
+        Revisa tu estancia y la cuenta con la que se simulará el pago.
       </p>
       <div className="detail">
         <section className="panel">
-          <h2>Seleccionar cuenta</h2>
+          <h2>Cuenta de pago</h2>
           <form id="payment" onSubmit={handleSubmit}>
             {user.accounts.map((account) => (
-              <label className="account" key={account.id}>
-                <input
-                  type="radio"
-                  name="account"
-                  value={account.id}
-                  checked={selectedAccount === account.id}
-                  onChange={() => setSelectedAccount(account.id)}
-                />
+              <div className="account" key={account.id}>
                 <span>
                   {account.bank} · {account.type} · ••••{' '}
                   {account.number.slice(-4)}
                   <br />
-                  <small>Saldo disponible: {money(account.balance)}</small>
+                  <small>
+                    El cobro se simula en el backend y siempre se aprueba.
+                  </small>
                 </span>
-              </label>
+              </div>
             ))}
             {error ? <p className="error">{error}</p> : null}
             <Button variant="primary" full type="submit">
@@ -72,15 +56,6 @@ export function PaymentPage() {
             </Button>
           </form>
           <div className="row">
-            <Button variant="link" onClick={() => openModal({ type: 'deposit' })}>
-              Ingresar fondos
-            </Button>
-            <Button
-              variant="link"
-              onClick={() => openModal({ type: 'add-account' })}
-            >
-              Añadir cuenta
-            </Button>
             <Button
               variant="link"
               onClick={() => navigate(`/alojamiento/${pendingQuote.property}`)}

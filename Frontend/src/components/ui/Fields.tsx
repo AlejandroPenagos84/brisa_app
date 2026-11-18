@@ -24,11 +24,16 @@ export function TextField({
   )
 }
 
+export interface SelectOption {
+  value: string
+  label: string
+}
+
 interface SelectFieldProps
   extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'name'> {
   label: string
   name: string
-  options: readonly string[]
+  options: ReadonlyArray<string | SelectOption>
 }
 
 export function SelectField({
@@ -41,11 +46,16 @@ export function SelectField({
     <label>
       {label}
       <select name={name} {...props}>
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
+        {options.map((option) => {
+          const value = typeof option === 'string' ? option : option.value
+          const text = typeof option === 'string' ? option : option.label
+
+          return (
+            <option key={value} value={value}>
+              {text}
+            </option>
+          )
+        })}
       </select>
     </label>
   )

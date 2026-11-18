@@ -34,13 +34,11 @@ export function Calendar({ property, start, end, onSelect }: CalendarProps) {
 
     const blocked =
       date < today() ||
-      date < property.from ||
-      date >= property.until ||
       db.bookings.some(
         (booking) =>
           booking.property === property.id &&
           date >= booking.start &&
-          date < booking.end,
+          date <= booking.end,
       )
 
     return { date, day, blocked }

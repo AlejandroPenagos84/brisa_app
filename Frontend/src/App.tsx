@@ -8,6 +8,7 @@ import { OwnerPage } from './pages/OwnerPage'
 import { PropertyFormPage } from './pages/PropertyFormPage'
 import { WalletPage } from './pages/WalletPage'
 import { BookingsPage } from './pages/BookingsPage'
+import { AdminPage } from './pages/AdminPage'
 import { SuccessPage } from './pages/SuccessPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 
@@ -34,6 +35,7 @@ export function App() {
             />
             <Route path="/cuenta" element={<WalletPage />} />
             <Route path="/reservas" element={<BookingsPage />} />
+            <Route path="/admin" element={<AdminPage />} />
             <Route
               path="/reserva-confirmada"
               element={<SuccessPage />}

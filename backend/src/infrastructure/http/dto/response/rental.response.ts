@@ -32,6 +32,12 @@ export class RentalResponse {
   endDate: Date;
 
   @ApiProperty({
+    description: 'Amount charged when the rental was booked',
+    example: 440,
+  })
+  chargedAmount: number;
+
+  @ApiProperty({
     description: 'Rental status',
     enum: ['UPCOMING', 'ACTIVE', 'FINISHED'],
     example: 'UPCOMING',

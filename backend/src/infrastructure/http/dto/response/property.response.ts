@@ -45,6 +45,12 @@ export class PropertyResponse {
     example: 'ACTIVE',
   })
   status: 'ACTIVE' | 'INACTIVE';
+
+  @ApiProperty({
+    description: 'Whether the owner has paused new reservations',
+    example: false,
+  })
+  manuallyInactive: boolean;
 }
 
 export class PropertyDetailsResponse extends PropertyResponse {

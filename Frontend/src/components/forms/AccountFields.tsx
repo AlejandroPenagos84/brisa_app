@@ -1,5 +1,5 @@
-import { BANKS } from '../../domain/brisa'
-import type { AccountInput, AccountType } from '../../types'
+import { useBrisa } from '../../context/BrisaContext'
+import type { AccountInput } from '../../types'
 import { SelectField, TextField } from '../ui/Fields'
 
 interface AccountFieldsProps {
@@ -8,22 +8,30 @@ interface AccountFieldsProps {
 }
 
 export function AccountFields({ value, onChange }: AccountFieldsProps) {
+  const { db } = useBrisa()
+  const banks = db.banks.map((bank) => ({
+    value: bank.id,
+    label: [bank.name, db.countries.find((country) => country.id === bank.countryId)?.name]
+      .filter(Boolean).join(' · '),
+  }))
+
   return (
     <>
       <SelectField
         label="Banco"
         name="bank"
-        options={BANKS}
-        value={value.bank}
-        onChange={(event) => onChange({ bank: event.target.value })}
+        options={[{ value: '', label: 'Selecciona un banco' }, ...banks]}
+        value={value.bankId}
+        required
+        onChange={(event) => onChange({ bankId: event.target.value })}
       />
       <SelectField
         label="Tipo de cuenta"
         name="type"
-        options={['Ahorros', 'Corriente']}
+        options={Array.from(new Set(['Ahorros', 'Corriente', value.type]))}
         value={value.type}
         onChange={(event) =>
-          onChange({ type: event.target.value as AccountType })
+          onChange({ type: event.target.value })
         }
       />
       <TextField
@@ -31,8 +39,7 @@ export function AccountFields({ value, onChange }: AccountFieldsProps) {
         name="number"
         value={value.number}
         required
-        pattern="[0-9]{6,20}"
-        inputMode="numeric"
+        maxLength={30}
         onChange={(event) => onChange({ number: event.target.value })}
       />
     </>
