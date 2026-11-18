@@ -25,18 +25,25 @@ export function LoginModal({ next }: LoginModalProps) {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    setSubmitting(true)
+    setError('')
 
     try {
-      const user = login(email, password)
+      const user = await login(email, password)
       closeModal()
 
-      if (next === 'payment' && user.role === 'cliente') {
+      if (next === 'admin' && user.role === 'administrador') {
+        navigate('/admin')
+      } else if (next === 'payment' && user.role === 'cliente') {
         navigate('/pago')
       } else if (next === 'payment') {
-        navigate('/propietario')
+        navigate(
+          user.role === 'administrador' ? '/admin' : '/propietario',
+        )
         showToast('Para reservar, inicia sesión con una cuenta de cliente')
       } else if (next === 'favorites') {
         setFilters({ favorites: true })
@@ -47,6 +54,8 @@ export function LoginModal({ next }: LoginModalProps) {
         navigate('/reservas')
       } else if (next === 'wallet') {
         navigate('/cuenta')
+      } else if (user.role === 'administrador') {
+        navigate('/admin')
       } else {
         navigate(user.role === 'propietario' ? '/propietario' : '/')
       }
@@ -54,6 +63,8 @@ export function LoginModal({ next }: LoginModalProps) {
       showToast(`Bienvenido, ${user.name}`)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Error inesperado')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -89,8 +100,8 @@ export function LoginModal({ next }: LoginModalProps) {
           Mostrar contraseña
         </label>
         {error ? <p className="error">{error}</p> : null}
-        <Button variant="primary" full type="submit">
-          Iniciar sesión
+        <Button variant="primary" full type="submit" disabled={submitting}>
+          {submitting ? 'Ingresando...' : 'Iniciar sesión'}
         </Button>
       </form>
       <Button
@@ -107,8 +118,14 @@ export function LoginModal({ next }: LoginModalProps) {
           <br />
           Propietario: {DEMO_CREDENTIALS.owner}
           <br />
+          Administrador: {DEMO_CREDENTIALS.admin}
+          <br />
           Contraseña: {DEMO_CREDENTIALS.password}
         </p>
+        <small>
+          La autenticación es local: el backend no maneja usuarios ni
+          contraseñas.
+        </small>
       </details>
     </Dialog>
   )

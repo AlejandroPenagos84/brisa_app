@@ -1,13 +1,14 @@
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useBrisa } from '../context/BrisaContext'
+import { rentalStatusLabels, today } from '../domain/brisa'
 import { Button } from '../components/ui/Button'
 import { PropertySummary } from '../components/ui/PropertySummary'
 
 export function BookingsPage() {
-  const { db, user } = useBrisa()
+  const { db, user, openModal } = useBrisa()
   const navigate = useNavigate()
 
-  if (!user) {
+  if (user?.role !== 'cliente') {
     return <Navigate to="/" replace />
   }
 
@@ -22,7 +23,14 @@ export function BookingsPage() {
         bookings.map((booking) => (
           <div className="panel narrow booking-card" key={booking.id}>
             <PropertySummary data={booking} />
-            <p className="success">Reserva confirmada · #{booking.id}</p>
+            <p className="success">
+              {rentalStatusLabels[booking.status]}
+            </p>
+            {booking.status === 'UPCOMING' && booking.start > today() && booking.total > 0 ? (
+              <Button onClick={() => openModal({ type: 'cancel-booking', booking })}>
+                Cancelar reserva
+              </Button>
+            ) : null}
           </div>
         ))
       ) : (

@@ -356,6 +356,64 @@ input:disabled {
   margin: 24px 0;
 }
 
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  gap: 14px;
+  margin: 24px 0;
+}
+
+.admin-stat h2 {
+  margin: 8px 0;
+}
+
+.admin-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(230px, 1fr);
+  align-items: start;
+  gap: 24px;
+}
+
+.admin-owner {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-owner p {
+  margin: 4px 0 0;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.table :is(th, td) {
+  padding: 12px 14px;
+  white-space: nowrap;
+}
+
+.table th {
+  background: var(--soft);
+}
+
+.table tbody tr + tr {
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 850px) {
+  .admin-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .empty {
   text-align: center;
   padding: 60px 20px;

@@ -1,10 +1,8 @@
 import { useBrisa } from '../../context/BrisaContext'
-import { AddAccountModal } from './AddAccountModal'
 import { CannotRemoveModal } from './CannotRemoveModal'
+import { CancelBookingModal } from './CancelBookingModal'
 import { ConfirmPaymentModal } from './ConfirmPaymentModal'
-import { DepositModal } from './DepositModal'
 import { DiscardChangesModal } from './DiscardChangesModal'
-import { InsufficientFundsModal } from './InsufficientFundsModal'
 import { LoginModal } from './LoginModal'
 import { RegisterBankModal } from './RegisterBankModal'
 import { RegisterModal } from './RegisterModal'
@@ -25,19 +23,10 @@ export function ModalHost() {
       return <RegisterBankModal draft={modal.draft} />
     case 'register-success':
       return <RegisterSuccessModal />
-    case 'deposit':
-      return <DepositModal />
-    case 'add-account':
-      return <AddAccountModal />
     case 'confirm-payment':
-      return (
-        <ConfirmPaymentModal
-          accountId={modal.accountId}
-          total={modal.total}
-        />
-      )
-    case 'insufficient-funds':
-      return <InsufficientFundsModal />
+      return <ConfirmPaymentModal total={modal.total} />
+    case 'cancel-booking':
+      return <CancelBookingModal booking={modal.booking} />
     case 'discard-changes':
       return <DiscardChangesModal />
     case 'remove-property':

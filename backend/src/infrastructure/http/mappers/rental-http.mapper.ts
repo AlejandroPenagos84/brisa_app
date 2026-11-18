@@ -34,6 +34,7 @@ export class RentalHttpMapper {
       clientId: data.clientId,
       startDate: data.startDate,
       endDate: data.endDate,
+      chargedAmount: data.cost,
       status: data.status,
     };
   }

@@ -1,13 +1,16 @@
 import { useEffect, useRef } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
+import { useBrisa } from '../../context/BrisaContext'
 import { ModalHost } from '../modals/ModalHost'
 import { ToastHost } from '../ui/ToastHost'
+import { Button } from '../ui/Button'
 import { Footer } from './Footer'
 import { Header } from './Header'
 import { MobileNav } from './MobileNav'
 
 export function Layout() {
   const location = useLocation()
+  const { ready, loading, error, refresh } = useBrisa()
   const mainRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
@@ -32,7 +35,14 @@ export function Layout() {
     <>
       <Header />
       <main id="app" ref={mainRef}>
-        <Outlet />
+        {ready ? <Outlet /> : loading ? (
+          <p role="status">Cargando datos de Brisa…</p>
+        ) : (
+          <div className="notice">
+            <p role="alert">{error}</p>
+            <Button onClick={() => void refresh()}>Reintentar conexión</Button>
+          </div>
+        )}
       </main>
       <Footer />
       <MobileNav />

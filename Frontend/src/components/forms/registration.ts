@@ -2,7 +2,7 @@ import { createRegistrationDraft } from '../../domain/brisa'
 import type { AccountInput, RegistrationDraft } from '../../types'
 
 export const EMPTY_ACCOUNT: AccountInput = {
-  bank: 'Bancolombia',
+  bankId: '',
   type: 'Ahorros',
   number: '',
 }

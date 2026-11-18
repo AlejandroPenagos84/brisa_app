@@ -11,22 +11,30 @@ interface RegisterBankModalProps {
 }
 
 export function RegisterBankModal({ draft }: RegisterBankModalProps) {
-  const { register, openModal } = useBrisa()
-  const [account, setAccount] = useState<AccountInput>(EMPTY_ACCOUNT)
+  const { db, register, openModal } = useBrisa()
+  const [account, setAccount] = useState<AccountInput>(() => ({
+    ...EMPTY_ACCOUNT,
+    bankId: db.banks[0]?.id ?? '',
+  }))
   const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   function update(patch: Partial<AccountInput>) {
     setAccount((current) => ({ ...current, ...patch }))
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    setSubmitting(true)
+    setError('')
 
     try {
-      register(draft, account)
+      await register(draft, account)
       openModal({ type: 'register-success' })
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Error inesperado')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -40,8 +48,8 @@ export function RegisterBankModal({ draft }: RegisterBankModalProps) {
       <form id="register-bank" onSubmit={handleSubmit}>
         <AccountFields value={account} onChange={update} />
         {error ? <p className="error">{error}</p> : null}
-        <Button variant="primary" full type="submit">
-          Registrar cuenta
+        <Button variant="primary" full type="submit" disabled={submitting}>
+          {submitting ? 'Registrando...' : 'Registrar cuenta'}
         </Button>
       </form>
       <Button

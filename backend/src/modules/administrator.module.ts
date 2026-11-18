@@ -12,15 +12,20 @@ import {
   BANK_REPOSITORY,
   type BankRepository,
 } from '@/application/ports/out/repositories/bank-repository.js';
+import {
+  UNIT_OF_WORK,
+  type UnitOfWork,
+} from '@/application/ports/out/repositories/unit-of-work.js';
 import { AdministratorService } from '@/application/services/administrator-service.js';
 import { UpdateAdministratorUseCase } from '@/application/use-cases/update-administrator.use-case.js';
 import { AdministratorController } from '@/infrastructure/http/controllers/administrator.controller.js';
 import { AdministratorRepositoryTypeORM } from '@/infrastructure/persistence/repositories_impl/administrator-repository-typeorm.js';
 import { AdministratorTransactionRepositoryTypeORM } from '@/infrastructure/persistence/repositories_impl/administrator-transaction-repository-typeorm.js';
 import { BankModule } from './bank.module.js';
+import { UnitOfWorkModule } from './unit-of-work.module.js';
 
 @Module({
-  imports: [BankModule],
+  imports: [BankModule, UnitOfWorkModule],
   controllers: [AdministratorController],
   providers: [
     {
@@ -50,11 +55,10 @@ import { BankModule } from './bank.module.js';
     {
       provide: UpdateAdministratorUseCase,
       useFactory: (
-        administratorRepository: AdministratorRepository,
+        unitOfWork: UnitOfWork,
         bankRepository: BankRepository,
-      ) =>
-        new UpdateAdministratorUseCase(administratorRepository, bankRepository),
-      inject: [ADMINISTRATOR_REPOSITORY, BANK_REPOSITORY],
+      ) => new UpdateAdministratorUseCase(unitOfWork, bankRepository),
+      inject: [UNIT_OF_WORK, BANK_REPOSITORY],
     },
   ],
   exports: [ADMINISTRATOR_REPOSITORY, ADMINISTRATOR_TRANSACTION_REPOSITORY],

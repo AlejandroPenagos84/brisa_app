@@ -1,9 +1,16 @@
+import { useNavigate } from 'react-router-dom'
 import { useBrisa } from '../../context/BrisaContext'
 import { Button } from '../ui/Button'
 import { Dialog } from '../ui/Dialog'
 
 export function RegisterSuccessModal() {
-  const { openModal } = useBrisa()
+  const { user, closeModal } = useBrisa()
+  const navigate = useNavigate()
+
+  function continueToApp() {
+    closeModal()
+    navigate(user?.role === 'propietario' ? '/propietario' : '/')
+  }
 
   return (
     <Dialog>
@@ -11,13 +18,9 @@ export function RegisterSuccessModal() {
         <h2>¡Registro exitoso!</h2>
         <p>Tu perfil y tu cuenta bancaria están listos.</p>
       </div>
-      <p>Inicia sesión con los datos que acabas de registrar.</p>
-      <Button
-        variant="primary"
-        full
-        onClick={() => openModal({ type: 'login' })}
-      >
-        Continuar e iniciar sesión
+      <p>Ya tienes una sesión local iniciada en este navegador.</p>
+      <Button variant="primary" full onClick={continueToApp}>
+        Continuar
       </Button>
     </Dialog>
   )

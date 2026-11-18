@@ -38,6 +38,11 @@ export function useAccountActions() {
     navigate('/cuenta')
   }
 
+  function goAdmin() {
+    if (!requireLogin('admin')) return
+    navigate('/admin')
+  }
+
   function goPublish() {
     if (!requireLogin('owner')) return
 
@@ -70,6 +75,7 @@ export function useAccountActions() {
     goBookings,
     goOwner,
     goWallet,
+    goAdmin,
     goPublish,
     handleLogout,
     openLogin,

@@ -1,50 +1,56 @@
-export type Role = 'cliente' | 'propietario'
+export type Role = 'cliente' | 'propietario' | 'administrador'
 
-export type AccountType = 'Ahorros' | 'Corriente'
 
-export type PropertyType = 'Casa' | 'Loft' | 'Cabaña' | 'Apartamento'
+
+export type PropertyStatus = 'ACTIVE' | 'INACTIVE'
+
+export type RentalStatus = 'UPCOMING' | 'ACTIVE' | 'FINISHED'
+
+export type TransactionType = 'PAYMENT' | 'REFUND'
 
 export type SortOption = 'recommended' | 'price'
 
 export interface BankAccount {
-  id: number
+  id: string
   bank: string
-  type: AccountType
+  bankId: string
+  type: string
   number: string
   balance: number
+  balanceKnown: boolean
 }
 
 export interface User {
-  id: number
+  id: string
   role: Role
   name: string
   surname: string
-  document: string
   email: string
   phone: string
-  password: string
+  cityId?: string
   accounts: BankAccount[]
-  favorites: number[]
+  favorites: string[]
 }
 
 export interface Property {
-  id: number
-  owner: number
-  active: boolean
+  id: string
+  owner: string
+  status: PropertyStatus
+  manuallyInactive: boolean
   title: string
   address: string
+  cityId: string
   location: string
-  type: PropertyType
   description: string
+  area: number
+  numberOfRooms: number
   capacity: number
   price: number
   photos: string[]
-  from: string
-  until: string
 }
 
 export interface Quote {
-  property: number
+  property: string
   start: string
   end: string
   guests: number
@@ -53,59 +59,105 @@ export interface Quote {
   price: number
 }
 
-export interface Booking extends Quote {
-  id: number
-  user: number
+export interface PaymentReceipt {
+  transactionId: string
+  status: 'APPROVED'
+  amount: number
+  paidFromAccount: string
+  paidAt: string
+}
+
+export interface Booking extends Omit<Quote, 'guests' | 'price'> {
+  id: string
+  user: string
   title: string
   photo: string
+  status: RentalStatus
+  payment?: PaymentReceipt
 }
 
 export interface RegistrationDraft {
-  role: Role
+  role: Extract<Role, 'cliente' | 'propietario'>
   name: string
   surname: string
-  document: string
   email: string
   phone: string
   password: string
+  cityId: string
 }
 
 export interface AccountInput {
-  bank: string
-  type: AccountType
+  bankId: string
+  type: string
   number: string
 }
 
 export interface PropertyInput {
-  title: string
+  cityId: string
   address: string
-  location: string
-  type: PropertyType
-  description: string
+  area: number
+  numberOfRooms: number
   capacity: number
   price: number
-  photos: string[]
-  from: string
-  until: string
 }
 
 export interface PropertyFormValues {
-  title: string
+  cityId: string
   address: string
-  location: string
-  type: PropertyType
-  description: string
+  area: string
+  numberOfRooms: string
   capacity: string
   price: string
-  from: string
-  until: string
+}
+
+export interface ApiBank {
+  id: string
+  name: string
+  countryId: string
+}
+
+export interface ApiCity {
+  id: string
+  name: string
+  countryId: string
+}
+
+export interface ApiCountry {
+  id: string
+  name: string
+}
+
+export interface Administrator {
+  id: string
+  name: string
+  phone: string
+  email: string
+  bankId: string
+  accountNumber: string
+  accountType: string
+  balance: number
+}
+
+export interface Transaction {
+  id: string
+  administratorId: string
+  ownerId: string
+  type: TransactionType
+  grossAmount: number
+  commission: number
+  netAmount: number
+  createdAt: string
 }
 
 export interface DbState {
-  serial: number
   users: User[]
   properties: Property[]
   bookings: Booking[]
+  banks: ApiBank[]
+  cities: ApiCity[]
+  countries: ApiCountry[]
+  administrator: Administrator | null
+  transactions: Transaction[]
 }
 
 export interface SearchForm {
@@ -116,7 +168,7 @@ export interface SearchForm {
 }
 
 export interface Filters extends SearchForm {
-  type: PropertyType | ''
+  cityId: string
   max: string
   favorites: boolean
   sort: SortOption
@@ -128,6 +180,7 @@ export type LoginTarget =
   | 'owner'
   | 'bookings'
   | 'wallet'
+  | 'admin'
   | null
 
 export type ModalState =
@@ -135,10 +188,8 @@ export type ModalState =
   | { type: 'register'; draft: RegistrationDraft }
   | { type: 'register-bank'; draft: RegistrationDraft }
   | { type: 'register-success' }
-  | { type: 'deposit' }
-  | { type: 'add-account' }
-  | { type: 'confirm-payment'; accountId: number; total: number }
-  | { type: 'insufficient-funds' }
+  | { type: 'confirm-payment'; total: number }
+  | { type: 'cancel-booking'; booking: Booking }
   | { type: 'discard-changes' }
-  | { type: 'remove-property'; propertyId: number }
+  | { type: 'remove-property'; propertyId: string }
   | { type: 'cannot-remove' }

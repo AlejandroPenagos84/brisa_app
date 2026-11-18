@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useBrisa } from '../../context/BrisaContext'
+import { userLabel } from '../../domain/brisa'
 import { useAccountActions } from '../../hooks/useAccountActions'
 import { Button } from '../ui/Button'
 
@@ -12,6 +13,7 @@ export function Header() {
     goBookings,
     goOwner,
     goWallet,
+    goAdmin,
     goPublish,
     handleLogout,
     openLogin,
@@ -99,9 +101,7 @@ export function Header() {
               {user ? (
                 <div className="menu-name">
                   {user.name}
-                  <small>
-                    {user.role === 'propietario' ? 'Propietario' : 'Cliente'}
-                  </small>
+                  <small>{userLabel(user.role)}</small>
                 </div>
               ) : null}
               {user ? (
@@ -110,6 +110,12 @@ export function Header() {
                     <Button onClick={() => run(goOwner)}>Mis inmuebles</Button>
                     <Button onClick={() => run(goPublish)}>
                       Poner inmueble en renta
+                    </Button>
+                  </>
+                ) : user.role === 'administrador' ? (
+                  <>
+                    <Button onClick={() => run(goAdmin)}>
+                      Panel de administración
                     </Button>
                   </>
                 ) : (

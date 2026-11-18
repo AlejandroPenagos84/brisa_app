@@ -57,10 +57,10 @@ import { UnitOfWorkModule } from './unit-of-work.module.js';
     {
       provide: UpdateOwnerUseCase,
       useFactory: (
-        ownerRepository: OwnerRepository,
+        unitOfWork: UnitOfWork,
         bankRepository: BankRepository,
-      ) => new UpdateOwnerUseCase(ownerRepository, bankRepository),
-      inject: [OWNER_REPOSITORY, BANK_REPOSITORY],
+      ) => new UpdateOwnerUseCase(unitOfWork, bankRepository),
+      inject: [UNIT_OF_WORK, BANK_REPOSITORY],
     },
     {
       provide: DeleteOwnerUseCase,

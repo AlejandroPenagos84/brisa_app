@@ -29,20 +29,20 @@ export function PropertyCard({ property }: PropertyCardProps) {
           src={property.photos[0]}
           alt={property.title}
         />
-        <h3>
-          {property.title}{' '}
-          <span style={{ float: 'right', fontSize: 12 }}>★ 4,96</span>
-        </h3>
-        <p>{property.location || property.address}</p>
+        <h3>{property.title}</h3>
+        <p>{property.location}</p>
         <p className="muted small">
-          {property.capacity} huéspedes · {property.type}
+          {property.capacity} huéspedes · {property.numberOfRooms} hab. ·{' '}
+          {property.area} m²
         </p>
         <p>
           <strong>{money(property.price)}</strong>{' '}
           <small>COP / noche</small>
         </p>
       </button>
-      <span className="badge">{property.type}</span>
+      <span className="badge">
+        {property.status === 'INACTIVE' ? 'Con reservas' : 'Disponible'}
+      </span>
       <button
         type="button"
         className="favorite"
