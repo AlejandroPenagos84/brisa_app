@@ -5,6 +5,7 @@ import { CityEntity } from '@/infrastructure/persistence/entities/city.entity.js
 import { ClientEntity } from '@/infrastructure/persistence/entities/client.entity.js';
 import { CountryEntity } from '@/infrastructure/persistence/entities/country.entity.js';
 import { OwnerEntity } from '@/infrastructure/persistence/entities/owner.entity.js';
+import { PropertyImageEntity } from '@/infrastructure/persistence/entities/property-image.entity.js';
 import { PropertyEntity } from '@/infrastructure/persistence/entities/property.entity.js';
 import { RentalEntity } from '@/infrastructure/persistence/entities/rental.entity.js';
 
@@ -17,6 +18,7 @@ export {
   CountryEntity,
   OwnerEntity,
   PropertyEntity,
+  PropertyImageEntity,
   RentalEntity,
 };
 
@@ -28,6 +30,7 @@ export const entities = [
   OwnerEntity,
   ClientEntity,
   PropertyEntity,
+  PropertyImageEntity,
   RentalEntity,
   AdministratorEntity,
   AdministratorTransactionEntity,

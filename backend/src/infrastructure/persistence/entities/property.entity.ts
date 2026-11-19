@@ -10,6 +10,7 @@ import {
 import { CityEntity } from '@/infrastructure/persistence/entities/city.entity.js';
 import { decimalTransformer } from '@/infrastructure/persistence/entities/decimal.transformer.js';
 import { OwnerEntity } from '@/infrastructure/persistence/entities/owner.entity.js';
+import { PropertyImageEntity } from '@/infrastructure/persistence/entities/property-image.entity.js';
 import { RentalEntity } from '@/infrastructure/persistence/entities/rental.entity.js';
 
 @Entity({ name: 'properties' })
@@ -65,4 +66,9 @@ export class PropertyEntity {
 
   @OneToMany(() => RentalEntity, (rental) => rental.property)
   rentals: Relation<RentalEntity[]>;
+
+  // Not eager: the repository loads them in a separate query, so
+  // SELECT ... FOR UPDATE does not run over an outer join
+  @OneToMany(() => PropertyImageEntity, (image) => image.property)
+  images: Relation<PropertyImageEntity[]>;
 }

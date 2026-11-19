@@ -6,6 +6,7 @@ import {
   FindOptionsWhere,
   In,
   LessThan,
+  Not,
   LessThanOrEqual,
   MoreThanOrEqual,
   Repository,
@@ -15,6 +16,7 @@ import {
   PropertyRepository,
 } from '@/application/ports/out/repositories/property-repository.js';
 import { Property } from '@/domain/property.js';
+import { PropertyImageEntity } from '@/infrastructure/persistence/entities/property-image.entity.js';
 import { PropertyEntity } from '@/infrastructure/persistence/entities/property.entity.js';
 import { RentalEntity } from '@/infrastructure/persistence/entities/rental.entity.js';
 import { PropertyMapper } from '@/infrastructure/persistence/mapper/property-mapper.js';
@@ -38,34 +40,88 @@ export class PropertyRepositoryTypeORM implements PropertyRepository {
     this.repository = manager.getRepository(PropertyEntity);
   }
 
+  // Loads the images of all the entities in one query and maps them
+  private async toDomain(entities: PropertyEntity[]): Promise<Property[]> {
+    if (entities.length === 0) return [];
+
+    const images = await this.manager.find(PropertyImageEntity, {
+      where: { propertyId: In(entities.map((entity) => entity.id)) },
+      order: { position: 'ASC' },
+    });
+
+    return entities.map((entity) => {
+      entity.images = images.filter((image) => image.propertyId === entity.id);
+      return PropertyMapper.fromEntityToDomain(entity);
+    });
+  }
+
+  private async toDomainOne(entity: PropertyEntity | null): Promise<Property | null> {
+    if (!entity) return null;
+    const [property] = await this.toDomain([entity]);
+    return property;
+  }
+
+  // Makes property_images match the aggregate: deletes the removed ones,
+  // inserts the new ones and updates the positions of the rest
+  private async syncImages(manager: EntityManager, property: Property): Promise<void> {
+    const propertyId = property.getId();
+    const images = PropertyMapper.imagesToEntities(property);
+    const ids = images.map((image) => image.id);
+
+    await manager.delete(PropertyImageEntity, {
+      propertyId,
+      ...(ids.length > 0 ? { id: Not(In(ids)) } : {}),
+    });
+
+    if (images.length === 0) return;
+
+    const existing = await manager.find(PropertyImageEntity, {
+      select: { id: true, position: true },
+      where: { propertyId },
+    });
+    const positionById = new Map(existing.map((image) => [image.id, image.position]));
+
+    const toInsert = images.filter((image) => !positionById.has(image.id));
+    if (toInsert.length > 0) await manager.insert(PropertyImageEntity, toInsert);
+
+    for (const image of images) {
+      const current = positionById.get(image.id);
+      if (current !== undefined && current !== image.position) {
+        await manager.update(PropertyImageEntity, { id: image.id }, { position: image.position });
+      }
+    }
+  }
+
   async findByIds(ids: UUID[]): Promise<Property[]> {
     if (ids.length === 0) return [];
 
     const entities = await this.repository.findBy({ id: In(ids) });
-    return entities.map((entity) => PropertyMapper.fromEntityToDomain(entity));
+    return this.toDomain(entities);
   }
 
   async findAll(): Promise<Property[]> {
     const entities = await this.repository.find();
-    return entities.map((entity) => PropertyMapper.fromEntityToDomain(entity));
+    return this.toDomain(entities);
   }
 
   async findById(id: UUID): Promise<Property | null> {
     const entity = await this.repository.findOneBy({ id });
-    return entity ? PropertyMapper.fromEntityToDomain(entity) : null;
+    return this.toDomainOne(entity);
   }
 
+  // Only the properties row is locked; its images are only changed through
+  // this aggregate, so that lock also protects them
   async findByIdForUpdate(id: UUID): Promise<Property | null> {
     const entity = await this.repository.findOne({
       where: { id },
       lock: { mode: 'pessimistic_write' }, // SELECT ... FOR UPDATE
     });
-    return entity ? PropertyMapper.fromEntityToDomain(entity) : null;
+    return this.toDomainOne(entity);
   }
 
   async findByOwnerId(ownerId: UUID): Promise<Property[]> {
     const entities = await this.repository.findBy({ ownerId });
-    return entities.map((entity) => PropertyMapper.fromEntityToDomain(entity));
+    return this.toDomain(entities);
   }
 
   async findByFilters(filters: PropertyFilters): Promise<Property[]> {
@@ -80,7 +136,7 @@ export class PropertyRepositoryTypeORM implements PropertyRepository {
     if (price) where.pricePerNight = price;
 
     const entities = await this.repository.findBy(where);
-    return entities.map((entity) => PropertyMapper.fromEntityToDomain(entity));
+    return this.toDomain(entities);
   }
 
   async findOccupiedPropertyIds(
@@ -104,7 +160,10 @@ export class PropertyRepositoryTypeORM implements PropertyRepository {
   }
 
   async save(property: Property): Promise<Property> {
-    await this.repository.insert(PropertyMapper.fromDomainToEntity(property));
+    await this.manager.transaction(async (manager) => {
+      await manager.insert(PropertyEntity, PropertyMapper.fromDomainToEntity(property));
+      await this.syncImages(manager, property);
+    });
     return property;
   }
 
@@ -118,10 +177,11 @@ export class PropertyRepositoryTypeORM implements PropertyRepository {
       throw new NotFoundError(`Property with id ${id} not found`);
     }
 
-    const saved = await this.repository.save(
-      PropertyMapper.fromDomainToEntity(property),
-    );
-    return PropertyMapper.fromEntityToDomain(saved);
+    await this.manager.transaction(async (manager) => {
+      await manager.save(PropertyEntity, PropertyMapper.fromDomainToEntity(property));
+      await this.syncImages(manager, property);
+    });
+    return property;
   }
 
   async deleteWithPastRentals(propertyId: UUID, today: Date): Promise<boolean> {

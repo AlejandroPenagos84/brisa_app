@@ -136,7 +136,34 @@ CREATE TABLE properties (
 );
 
 -- =========================================
--- 8. RENTALS
+-- 8. PROPERTY IMAGES
+-- =========================================
+
+-- Only the file name is stored; the bytes live on disk at
+-- uploads/properties/{property_id}/{file_name}, and the URL is built by the API.
+-- Deleting a property deletes its rows; the files are deleted by the API.
+CREATE TABLE property_images (
+    id VARCHAR(36) PRIMARY KEY,
+    property_id VARCHAR(36) NOT NULL,
+    file_name VARCHAR(100) NOT NULL,
+
+    -- 0 is the cover; the domain keeps positions as 0..n-1
+    position INT NOT NULL,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE,
+
+    CONSTRAINT CHK_property_images_position CHECK (position >= 0),
+
+    -- Deferred: changing the cover updates the positions row by row, so
+    -- two rows can share a position until the transaction commits
+    CONSTRAINT UQ_property_images_position
+        UNIQUE (property_id, position) DEFERRABLE INITIALLY DEFERRED
+);
+
+-- =========================================
+-- 9. RENTALS
 -- =========================================
 
 CREATE EXTENSION IF NOT EXISTS btree_gist;
@@ -174,7 +201,7 @@ CREATE TABLE rentals (
 );
 
 -- =========================================
--- 9. ADMINISTRATOR ↔ OWNER TRANSACTIONS
+-- 10. ADMINISTRATOR ↔ OWNER TRANSACTIONS
 -- =========================================
 
 -- One row per money movement between the administrator and an owner.
@@ -216,7 +243,7 @@ CREATE INDEX IX_aot_owner_created_at
 -- =========================================
 
 -- =========================================
--- 10. COUNTRIES
+-- 11. COUNTRIES
 -- =========================================
 
 INSERT INTO countries (id, name) VALUES
@@ -226,7 +253,7 @@ INSERT INTO countries (id, name) VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================================
--- 11. CITIES
+-- 12. CITIES
 -- =========================================
 
 INSERT INTO cities (id, name, country_id) VALUES
@@ -237,7 +264,7 @@ INSERT INTO cities (id, name, country_id) VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================================
--- 12. BANKS
+-- 13. BANKS
 -- =========================================
 
 INSERT INTO banks (id, name, country_id) VALUES
@@ -248,10 +275,10 @@ INSERT INTO banks (id, name, country_id) VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================================
--- 13. OWNERS
+-- 14. OWNERS
 -- =========================================
 
--- balance starts at 0 and is computed from the transactions (section 18)
+-- balance starts at 0 and is computed from the transactions (section 19)
 INSERT INTO owners (id, name, phone, email, bank_id, account_number, account_type) VALUES
     ('a0000000-0000-4000-8000-000000000001', 'Ana Gómez', '3001234567', 'ana.gomez@example.com', 'b0000000-0000-4000-8000-000000000001', '5001001001', 'Ahorros'),
     ('a0000000-0000-4000-8000-000000000002', 'Carlos Pérez', '3109876543', 'carlos.perez@example.com', 'b0000000-0000-4000-8000-000000000002', '5002002002', 'Corriente'),
@@ -260,7 +287,7 @@ INSERT INTO owners (id, name, phone, email, bank_id, account_number, account_typ
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================================
--- 14. CLIENTS
+-- 15. CLIENTS
 -- =========================================
 
 INSERT INTO clients (id, name, phone, email, city_id, bank_id, account_number, account_type) VALUES
@@ -271,16 +298,16 @@ INSERT INTO clients (id, name, phone, email, city_id, bank_id, account_number, a
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================================
--- 15. ADMINISTRATOR
+-- 16. ADMINISTRATOR
 -- =========================================
 
--- balance starts at 0 and is computed from the transactions (section 18)
+-- balance starts at 0 and is computed from the transactions (section 19)
 INSERT INTO administrators (id, name, phone, email, bank_id, account_number, account_type) VALUES
     ('f0000000-0000-4000-8000-000000000001', 'Administrador Brisa', '3000000000', 'admin@brisa.example.com', 'b0000000-0000-4000-8000-000000000001', '9001001001', 'Corriente')
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================================
--- 16. PROPERTIES
+-- 17. PROPERTIES
 -- =========================================
 
 INSERT INTO properties (id, address, area, number_of_rooms, capacity, price_per_night, owner_id, city_id) VALUES
@@ -292,7 +319,7 @@ INSERT INTO properties (id, address, area, number_of_rooms, capacity, price_per_
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================================
--- 17. RENTALS
+-- 18. RENTALS
 -- =========================================
 
 INSERT INTO rentals (property_id, client_id, check_in_date, check_out_date, charged_amount) VALUES
@@ -312,7 +339,7 @@ UPDATE rentals SET status = CASE
 END;
 
 -- =========================================
--- 18. TRANSACTIONS AND BALANCES
+-- 19. TRANSACTIONS AND BALANCES
 -- =========================================
 
 -- One PAYMENT per seeded rental, as if it was booked 15 days before the
