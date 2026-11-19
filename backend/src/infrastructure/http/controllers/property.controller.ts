@@ -9,30 +9,45 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBadRequestResponse,
+  ApiBody,
   ApiConflictResponse,
+  ApiConsumes,
   ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiPayloadTooLargeResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { PropertyService } from '@/application/services/property-service.js';
+import { AddPropertyImageUseCase } from '@/application/use-cases/add-property-image.use-case.js';
 import { AddPropertyUseCase } from '@/application/use-cases/add-property.use-case.js';
 import { EditPropertyUseCase } from '@/application/use-cases/edit-property.use-case.js';
+import { RemovePropertyImageUseCase } from '@/application/use-cases/remove-property-image.use-case.js';
 import { RemovePropertyUseCase } from '@/application/use-cases/remove-property.use-case.js';
 import {
   PropertyResponse,
   PropertyDetailsResponse,
 } from '@/infrastructure/http/dto/response/property.response.js';
+import { PropertyImageResponse } from '@/infrastructure/http/dto/response/property-image.response.js';
+import { AddPropertyImageRequest } from '@/infrastructure/http/dto/request/create/add-property-image.request.js';
 import { CreatePropertyRequest } from '@/infrastructure/http/dto/request/create/create-property.request.js';
 import { OwnerActionRequest } from '@/infrastructure/http/dto/request/query/owner-action.request.js';
 import { PropertyFiltersRequest } from '@/infrastructure/http/dto/request/query/property-filters.request.js';
 import { UpdatePropertyRequest } from '@/infrastructure/http/dto/request/update/update-property.request.js';
+import {
+  MAX_IMAGE_SIZE_BYTES,
+  requireImage,
+  type UploadedImageFile,
+} from '@/infrastructure/http/files/image-upload.js';
 import { PropertyHttpMapper } from '@/infrastructure/http/mappers/property-http.mapper.js';
 
 // Writes receive the owner making the request (ownerId): only the owner of
@@ -46,6 +61,8 @@ export class PropertyController {
     private readonly addProperty: AddPropertyUseCase,
     private readonly editProperty: EditPropertyUseCase,
     private readonly removeProperty: RemovePropertyUseCase,
+    private readonly addPropertyImage: AddPropertyImageUseCase,
+    private readonly removePropertyImage: RemovePropertyImageUseCase,
   ) {}
 
   @Get()
@@ -178,5 +195,77 @@ export class PropertyController {
     @Query() query: OwnerActionRequest,
   ): Promise<void> {
     await this.removeProperty.execute(query.ownerId, id);
+  }
+
+  @Post(':id/images')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: MAX_IMAGE_SIZE_BYTES, files: 1 },
+    }),
+  )
+  @ApiOperation({
+    summary:
+      'Upload an image to a property, only by its owner. It goes last; the first image is the cover',
+  })
+  @ApiParam({ name: 'id', description: 'Property identifier', format: 'uuid' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['ownerId', 'file'],
+      properties: {
+        ownerId: { type: 'string', format: 'uuid' },
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'JPEG, PNG or WebP, up to 5 MB',
+        },
+      },
+    },
+  })
+  @ApiCreatedResponse({
+    description: 'Image added',
+    type: PropertyImageResponse,
+  })
+  @ApiBadRequestResponse({ description: 'Missing file or not an image' })
+  @ApiForbiddenResponse({
+    description: 'The property belongs to another owner',
+  })
+  @ApiNotFoundResponse({ description: 'Owner or property not found' })
+  @ApiConflictResponse({ description: 'The property already has 10 images' })
+  @ApiPayloadTooLargeResponse({ description: 'The file is larger than 5 MB' })
+  async addImage(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() request: AddPropertyImageRequest,
+    @UploadedFile() file: UploadedImageFile | undefined,
+  ): Promise<PropertyImageResponse> {
+    const { format, content } = requireImage(file);
+    const image = await this.addPropertyImage.execute({
+      ownerId: request.ownerId,
+      propertyId: id,
+      format,
+      content,
+    });
+    return PropertyHttpMapper.fromImageToResponse(id, image);
+  }
+
+  @Delete(':id/images/:imageId')
+  @ApiOperation({
+    summary:
+      'Delete an image of a property, only by its owner. The next one moves up',
+  })
+  @ApiParam({ name: 'id', description: 'Property identifier', format: 'uuid' })
+  @ApiParam({ name: 'imageId', description: 'Image identifier', format: 'uuid' })
+  @ApiOkResponse({ description: 'Image deleted' })
+  @ApiForbiddenResponse({
+    description: 'The property belongs to another owner',
+  })
+  @ApiNotFoundResponse({ description: 'Owner, property or image not found' })
+  async deleteImage(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('imageId', ParseUUIDPipe) imageId: string,
+    @Query() query: OwnerActionRequest,
+  ): Promise<void> {
+    await this.removePropertyImage.execute(query.ownerId, id, imageId);
   }
 }

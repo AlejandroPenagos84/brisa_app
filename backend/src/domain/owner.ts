@@ -18,6 +18,7 @@ import {
   subtractFromBalance,
 } from './money.js';
 import { Property, type PropertyChanges } from './property.js';
+import type { PropertyImage } from './property-image.js';
 import type { Rental } from './rental.js';
 
 // Data of a new property. The owner and the id are set by addProperty
@@ -77,6 +78,18 @@ export class Owner {
     this.assertOwns(property);
     property.applyChanges(changes, currentRentals);
     return property;
+  }
+
+  // Only the owner of the property can change its images
+  addPropertyImage(property: Property, imageId: UUID, fileName: string): PropertyImage {
+    this.assertOwns(property);
+    return property.addImage(imageId, fileName);
+  }
+
+  // Returns the removed image so the caller can delete its file
+  removePropertyImage(property: Property, imageId: UUID): PropertyImage {
+    this.assertOwns(property);
+    return property.removeImage(imageId);
   }
 
   // Diagram: eliminarInmueble(). Validates; the caller deletes it.

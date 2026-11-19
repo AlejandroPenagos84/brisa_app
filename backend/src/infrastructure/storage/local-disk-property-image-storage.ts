@@ -5,6 +5,12 @@ import type { UUID } from '@/utils/types.js';
 
 // Folder served by the API as /uploads. UPLOADS_DIR can change it
 export const UPLOADS_DIR = resolve(process.env.UPLOADS_DIR ?? 'uploads');
+export const UPLOADS_URL_PREFIX = '/uploads';
+
+// Relative to the API origin; the frontend prefixes its API URL
+export function propertyImageUrl(propertyId: UUID, fileName: string): string {
+  return `${UPLOADS_URL_PREFIX}/properties/${propertyId}/${fileName}`;
+}
 
 // Layout: {UPLOADS_DIR}/properties/{propertyId}/{fileName}
 export class LocalDiskPropertyImageStorage implements PropertyImageStorage {

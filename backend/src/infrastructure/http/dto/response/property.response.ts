@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { CitySummaryResponse } from './city-summary.response.js';
 import { OwnerResponse } from './owner.response.js';
+import { PropertyImageResponse } from './property-image.response.js';
 
 export class PropertyResponse {
   @ApiProperty({
@@ -51,6 +52,12 @@ export class PropertyResponse {
     example: false,
   })
   manuallyInactive: boolean;
+
+  @ApiProperty({
+    description: 'Images ordered by position; the first one is the cover',
+    type: [PropertyImageResponse],
+  })
+  images: PropertyImageResponse[];
 }
 
 export class PropertyDetailsResponse extends PropertyResponse {

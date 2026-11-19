@@ -27,6 +27,12 @@ const CONFLICT_CODES: ReadonlySet<DomainErrorCode> = new Set<DomainErrorCode>([
   DomainErrorCode.RENTAL_ALREADY_STARTED,
   DomainErrorCode.RENTAL_HAS_NO_COST,
   DomainErrorCode.PAYMENT_BANK_MISMATCH,
+  DomainErrorCode.PROPERTY_IMAGE_LIMIT_REACHED,
+]);
+
+// The domain looked for something inside the aggregate and it is not there
+const NOT_FOUND_CODES: ReadonlySet<DomainErrorCode> = new Set<DomainErrorCode>([
+  DomainErrorCode.PROPERTY_IMAGE_NOT_FOUND,
 ]);
 
 // The rule is about who makes the request, not about the state
@@ -36,6 +42,7 @@ const FORBIDDEN_CODES: ReadonlySet<DomainErrorCode> = new Set<DomainErrorCode>([
 
 function statusFor(code: DomainErrorCode): HttpStatus {
   if (FORBIDDEN_CODES.has(code)) return HttpStatus.FORBIDDEN;
+  if (NOT_FOUND_CODES.has(code)) return HttpStatus.NOT_FOUND;
   if (CONFLICT_CODES.has(code)) return HttpStatus.CONFLICT;
   return HttpStatus.BAD_REQUEST;
 }

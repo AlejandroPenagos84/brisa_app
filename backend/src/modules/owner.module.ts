@@ -2,6 +2,10 @@ import { Module } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { CLOCK, type Clock } from '@/application/ports/out/clock.js';
 import {
+  PROPERTY_IMAGE_STORAGE,
+  type PropertyImageStorage,
+} from '@/application/ports/out/property-image-storage.js';
+import {
   ADMINISTRATOR_TRANSACTION_REPOSITORY,
   type AdministratorTransactionRepository,
 } from '@/application/ports/out/repositories/administrator-transaction-repository.js';
@@ -26,10 +30,17 @@ import { OwnerRepositoryTypeORM } from '@/infrastructure/persistence/repositorie
 import { AdministratorModule } from './administrator.module.js';
 import { BankModule } from './bank.module.js';
 import { ClockModule } from './clock.module.js';
+import { StorageModule } from './storage.module.js';
 import { UnitOfWorkModule } from './unit-of-work.module.js';
 
 @Module({
-  imports: [BankModule, AdministratorModule, ClockModule, UnitOfWorkModule],
+  imports: [
+    BankModule,
+    AdministratorModule,
+    ClockModule,
+    UnitOfWorkModule,
+    StorageModule,
+  ],
   controllers: [OwnerController],
   providers: [
     {
@@ -64,9 +75,12 @@ import { UnitOfWorkModule } from './unit-of-work.module.js';
     },
     {
       provide: DeleteOwnerUseCase,
-      useFactory: (unitOfWork: UnitOfWork, clock: Clock) =>
-        new DeleteOwnerUseCase(unitOfWork, clock),
-      inject: [UNIT_OF_WORK, CLOCK],
+      useFactory: (
+        unitOfWork: UnitOfWork,
+        clock: Clock,
+        imageStorage: PropertyImageStorage,
+      ) => new DeleteOwnerUseCase(unitOfWork, clock, imageStorage),
+      inject: [UNIT_OF_WORK, CLOCK, PROPERTY_IMAGE_STORAGE],
     },
   ],
   exports: [OWNER_REPOSITORY],

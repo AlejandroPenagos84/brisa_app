@@ -2,6 +2,9 @@ import type { CreatePropertyCommand } from '@/application/commands/create-proper
 import type { PropertyDetails } from '@/application/models/property-details.js';
 import type { UpdatePropertyCommand } from '@/application/commands/update-property.command.js';
 import { Property } from '@/domain/property.js';
+import type { PropertyImage } from '@/domain/property-image.js';
+import type { PropertyImageResponse } from '@/infrastructure/http/dto/response/property-image.response.js';
+import { propertyImageUrl } from '@/infrastructure/storage/local-disk-property-image-storage.js';
 import { CreatePropertyRequest } from '@/infrastructure/http/dto/request/create/create-property.request.js';
 import {
   PropertyResponse,
@@ -52,6 +55,20 @@ export class PropertyHttpMapper {
       price: data.pricePerNight,
       status: data.status,
       manuallyInactive: property.isManuallyInactive(),
+      images: property
+        .getImages()
+        .map((image) => this.fromImageToResponse(data.id, image)),
+    };
+  }
+
+  static fromImageToResponse(
+    propertyId: string,
+    image: PropertyImage,
+  ): PropertyImageResponse {
+    return {
+      id: image.getId(),
+      url: propertyImageUrl(propertyId, image.getFileName()),
+      position: image.getPosition(),
     };
   }
 

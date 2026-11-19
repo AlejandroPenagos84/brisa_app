@@ -1,16 +1,18 @@
 import { NotFoundError } from '@/application/errors/application-error.js';
 import type { Clock } from '@/application/ports/out/clock.js';
+import type { PropertyImageStorage } from '@/application/ports/out/property-image-storage.js';
 import type { UnitOfWork } from '@/application/ports/out/repositories/unit-of-work.js';
 import type { UUID } from '@/utils/types.js';
 
 // Diagram: Propietario.eliminarInmueble(). ownerId is the owner making the
 // request: only the owner of the property can delete it. Deletes the
 // property with its finished rentals; the domain rejects it if it has
-// current rentals.
+// current rentals. Its image files are deleted after the commit.
 export class RemovePropertyUseCase {
   constructor(
     private readonly unitOfWork: UnitOfWork,
     private readonly clock: Clock,
+    private readonly imageStorage: PropertyImageStorage,
   ) {}
 
   async execute(ownerId: UUID, id: UUID): Promise<void> {
@@ -40,5 +42,8 @@ export class RemovePropertyUseCase {
         throw new NotFoundError(`Property with id ${id} not found`);
       }
     });
+
+    // Best effort: the rows are already gone; a failure only leaves files
+    await this.imageStorage.deleteAll(id).catch(() => {});
   }
 }

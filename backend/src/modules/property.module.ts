@@ -2,6 +2,10 @@ import { Module } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { CLOCK, type Clock } from '@/application/ports/out/clock.js';
 import {
+  PROPERTY_IMAGE_STORAGE,
+  type PropertyImageStorage,
+} from '@/application/ports/out/property-image-storage.js';
+import {
   BANK_REPOSITORY,
   type BankRepository,
 } from '@/application/ports/out/repositories/bank-repository.js';
@@ -22,8 +26,10 @@ import {
   type UnitOfWork,
 } from '@/application/ports/out/repositories/unit-of-work.js';
 import { PropertyService } from '@/application/services/property-service.js';
+import { AddPropertyImageUseCase } from '@/application/use-cases/add-property-image.use-case.js';
 import { AddPropertyUseCase } from '@/application/use-cases/add-property.use-case.js';
 import { EditPropertyUseCase } from '@/application/use-cases/edit-property.use-case.js';
+import { RemovePropertyImageUseCase } from '@/application/use-cases/remove-property-image.use-case.js';
 import { RemovePropertyUseCase } from '@/application/use-cases/remove-property.use-case.js';
 import { PropertyController } from '@/infrastructure/http/controllers/property.controller.js';
 import { PropertyRepositoryTypeORM } from '@/infrastructure/persistence/repositories_impl/property-repository-typeorm.js';
@@ -31,10 +37,18 @@ import { BankModule } from './bank.module.js';
 import { CityModule } from './city.module.js';
 import { ClockModule } from './clock.module.js';
 import { OwnerModule } from './owner.module.js';
+import { StorageModule } from './storage.module.js';
 import { UnitOfWorkModule } from './unit-of-work.module.js';
 
 @Module({
-  imports: [CityModule, OwnerModule, BankModule, ClockModule, UnitOfWorkModule],
+  imports: [
+    CityModule,
+    OwnerModule,
+    BankModule,
+    ClockModule,
+    UnitOfWorkModule,
+    StorageModule,
+  ],
   controllers: [PropertyController],
   providers: [
     {
@@ -89,9 +103,24 @@ import { UnitOfWorkModule } from './unit-of-work.module.js';
     },
     {
       provide: RemovePropertyUseCase,
-      useFactory: (unitOfWork: UnitOfWork, clock: Clock) =>
-        new RemovePropertyUseCase(unitOfWork, clock),
-      inject: [UNIT_OF_WORK, CLOCK],
+      useFactory: (
+        unitOfWork: UnitOfWork,
+        clock: Clock,
+        imageStorage: PropertyImageStorage,
+      ) => new RemovePropertyUseCase(unitOfWork, clock, imageStorage),
+      inject: [UNIT_OF_WORK, CLOCK, PROPERTY_IMAGE_STORAGE],
+    },
+    {
+      provide: AddPropertyImageUseCase,
+      useFactory: (unitOfWork: UnitOfWork, imageStorage: PropertyImageStorage) =>
+        new AddPropertyImageUseCase(unitOfWork, imageStorage),
+      inject: [UNIT_OF_WORK, PROPERTY_IMAGE_STORAGE],
+    },
+    {
+      provide: RemovePropertyImageUseCase,
+      useFactory: (unitOfWork: UnitOfWork, imageStorage: PropertyImageStorage) =>
+        new RemovePropertyImageUseCase(unitOfWork, imageStorage),
+      inject: [UNIT_OF_WORK, PROPERTY_IMAGE_STORAGE],
     },
   ],
   exports: [PROPERTY_REPOSITORY, PropertyService],
