@@ -46,7 +46,16 @@ export interface Property {
   numberOfRooms: number
   capacity: number
   price: number
+  // Uploaded by the owner, ordered; the first one is the cover
+  images: PropertyImage[]
+  // What the pages show: the images, or a city photo when there are none
   photos: string[]
+}
+
+export interface PropertyImage {
+  id: string
+  // Absolute URL, ready for <img src>
+  url: string
 }
 
 export interface Quote {

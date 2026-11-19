@@ -31,6 +31,14 @@ export interface ApiClient {
   }
 }
 
+export interface ApiPropertyImage {
+  id: string
+  // Relative to the API origin: use apiAssetUrl
+  url: string
+  // 0 is the cover
+  position: number
+}
+
 export interface ApiProperty {
   id: string
   ownerId: string
@@ -42,6 +50,7 @@ export interface ApiProperty {
   price: number
   status: 'ACTIVE' | 'INACTIVE'
   manuallyInactive: boolean
+  images?: ApiPropertyImage[]
   city?: {
     id: string
     name: string
@@ -187,6 +196,21 @@ export const api = {
     request<void>(`/properties/${id}?ownerId=${ownerId}`, {
       method: 'DELETE',
     }),
+  // file: JPEG, PNG or WebP up to 5 MB; it goes last in the gallery
+  addPropertyImage: (propertyId: string, ownerId: string, file: File) => {
+    const form = new FormData()
+    form.append('ownerId', ownerId)
+    form.append('file', file)
+    return request<ApiPropertyImage>(`/properties/${propertyId}/images`, {
+      method: 'POST',
+      body: form,
+    })
+  },
+  deletePropertyImage: (propertyId: string, imageId: string, ownerId: string) =>
+    request<void>(
+      `/properties/${propertyId}/images/${imageId}?ownerId=${ownerId}`,
+      { method: 'DELETE' },
+    ),
   createRental: (payload: CreateRentalPayload) =>
     request<ApiReservation>('/rentals', { method: 'POST', body: payload }),
   cancelRental: (propertyId: string, clientId: string, startDate: string) =>

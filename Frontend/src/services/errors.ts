@@ -40,6 +40,9 @@ const DOMAIN_CODE_MESSAGES: Record<string, string> = {
   PROPERTY_NOT_AVAILABLE:
     'El inmueble no está disponible en las fechas seleccionadas',
   PROPERTY_HAS_ACTIVE_RENTALS: 'El inmueble tiene reservas activas o próximas',
+  INVALID_PROPERTY_IMAGE: 'La imagen no es válida',
+  PROPERTY_IMAGE_LIMIT_REACHED: 'Un inmueble puede tener máximo 10 imágenes',
+  PROPERTY_IMAGE_NOT_FOUND: 'La imagen ya no existe en este inmueble',
 
   INVALID_PROPERTY: 'El inmueble no es válido',
   INVALID_CLIENT: 'El cliente no es válido',
@@ -70,6 +73,10 @@ const EXACT_MESSAGES: Record<string, string> = {
   'The requested dates overlap': 'Las fechas solicitadas se cruzan con otra reserva',
   'Rental not found': 'No se encontró la reserva',
   'Internal server error': 'Ocurrió un error en el servidor. Intenta de nuevo',
+  'Only JPEG, PNG or WebP images are allowed':
+    'Solo se permiten imágenes JPG, PNG o WebP',
+  'The image file is required (field "file")': 'Selecciona una imagen',
+  'File too large': 'La imagen supera el máximo de 5 MB',
 }
 
 const ENTITY_NAMES: Record<string, string> = {
@@ -161,6 +168,7 @@ export function messageForStatus(status: number): string {
   if (status === 403) return 'No tienes permiso para realizar esta acción'
   if (status === 404) return 'No se encontró la información solicitada'
   if (status === 409) return 'La operación no se puede completar con el estado actual'
+  if (status === 413) return 'El archivo es demasiado grande'
   if (status >= 500) return 'Ocurrió un error en el servidor. Intenta de nuevo'
   return `La solicitud falló (código ${status})`
 }

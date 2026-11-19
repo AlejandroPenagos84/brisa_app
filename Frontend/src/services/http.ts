@@ -11,17 +11,20 @@ export async function request<T>(
   options: RequestOptions = {},
 ): Promise<T> {
   const { body, headers, ...rest } = options
+  // FormData goes as is: the browser sets the multipart Content-Type with
+  // its boundary
+  const isForm = body instanceof FormData
+  const isJson = body !== undefined && !isForm
 
   let response: Response
 
   try {
     response = await fetch(`${API_URL}${path}`, {
       ...rest,
-      headers: body === undefined ? headers : {
-        'Content-Type': 'application/json',
-        ...headers,
-      },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      headers: isJson
+        ? { 'Content-Type': 'application/json', ...headers }
+        : headers,
+      body: isForm ? body : isJson ? JSON.stringify(body) : undefined,
     })
   } catch {
     throw new Error('No se pudo conectar con el servidor de Brisa')
@@ -45,4 +48,9 @@ export async function request<T>(
 
 export const apiConfig = {
   baseUrl: API_URL,
+}
+
+// The API returns file URLs relative to its origin (/uploads/...)
+export function apiAssetUrl(path: string): string {
+  return /^https?:\/\//.test(path) ? path : `${API_URL}${path}`
 }

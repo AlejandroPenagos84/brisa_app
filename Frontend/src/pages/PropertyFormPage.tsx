@@ -4,11 +4,13 @@ import { useBrisa } from '../context/BrisaContext'
 import type { PropertyFormValues, PropertyInput } from '../types'
 import { Button } from '../components/ui/Button'
 import { SelectField, TextField } from '../components/ui/Fields'
+import { PropertyImagesField } from '../components/forms/PropertyImagesField'
 
 export function PropertyFormPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { db, user, publish, openModal, showToast } = useBrisa()
+  const { db, user, publish, syncPropertyImages, openModal, showToast } =
+    useBrisa()
   const existing = id
     ? db.properties.find((property) => property.id === id)
     : undefined
@@ -20,6 +22,8 @@ export function PropertyFormPage() {
     capacity: existing ? String(existing.capacity) : '1',
     price: existing ? String(existing.price) : '',
   }))
+  const [removedImageIds, setRemovedImageIds] = useState<string[]>([])
+  const [newImages, setNewImages] = useState<File[]>([])
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -67,9 +71,20 @@ export function PropertyFormPage() {
     }
 
     try {
-      await publish(data, existing?.id)
+      const saved = await publish(data, existing?.id)
+      // The property already exists here; a failed image does not undo it
+      const failures = await syncPropertyImages(
+        saved.id,
+        removedImageIds,
+        newImages,
+      )
       navigate('/propietario')
-      showToast(existing ? 'Cambios guardados' : 'Inmueble publicado')
+      const done = existing ? 'Cambios guardados' : 'Inmueble publicado'
+      showToast(
+        failures.length
+          ? `${done}, pero algunas fotos fallaron: ${failures.join('. ')}`
+          : done,
+      )
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Error inesperado')
     } finally {
@@ -164,6 +179,16 @@ export function PropertyFormPage() {
             onChange={(event) => update({ price: event.target.value })}
           />
         </div>
+        <PropertyImagesField
+          existing={existing?.images ?? []}
+          removedIds={removedImageIds}
+          newFiles={newImages}
+          disabled={submitting}
+          onChange={(removedIds, files) => {
+            setRemovedImageIds(removedIds)
+            setNewImages(files)
+          }}
+        />
         {error ? <p className="error">{error}</p> : null}
         <div className="row">
           <Button variant="primary" type="submit" disabled={submitting}>

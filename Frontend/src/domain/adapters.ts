@@ -16,6 +16,7 @@ import type {
   ApiReservation,
   ApiTransaction,
 } from '../services/api'
+import { apiAssetUrl } from '../services/http'
 
 const CITY_PHOTOS: Record<string, string> = {
   Bogotá:
@@ -38,6 +39,9 @@ function photoFor(cityName: string): string {
 
 export function adaptProperty(property: ApiProperty): Property {
   const cityName = property.city?.name ?? 'Ubicación sin confirmar'
+  const images = [...(property.images ?? [])]
+    .sort((a, b) => a.position - b.position)
+    .map((image) => ({ id: image.id, url: apiAssetUrl(image.url) }))
 
   return {
     id: property.id,
@@ -57,7 +61,10 @@ export function adaptProperty(property: ApiProperty): Property {
     numberOfRooms: property.numberOfRooms,
     capacity: property.capacity,
     price: property.price,
-    photos: [photoFor(cityName)],
+    images,
+    photos: images.length
+      ? images.map((image) => image.url)
+      : [photoFor(cityName)],
   }
 }
 

@@ -59,6 +59,12 @@ interface BrisaContextValue {
   publish: (data: PropertyInput, propertyId?: string) => Promise<Property>
   setPropertyStatus: (id: string, status: PropertyStatus) => Promise<void>
   remove: (propertyId: string) => Promise<void>
+  // Removes and then uploads; returns the messages of the failed files
+  syncPropertyImages: (
+    propertyId: string,
+    removeIds: string[],
+    files: File[],
+  ) => Promise<string[]>
   pay: (quote: Quote) => Promise<Booking>
   cancelBooking: (booking: Booking) => Promise<void>
   toggleFavorite: (propertyId: string) => void
@@ -437,6 +443,36 @@ export function BrisaProvider({ children }: { children: ReactNode }) {
     [refresh, user],
   )
 
+  const syncPropertyImages = useCallback(
+    async (propertyId: string, removeIds: string[], files: File[]) => {
+      if (!user || user.role !== 'propietario') {
+        throw new Error('Inicia sesión como propietario para continuar')
+      }
+
+      const failures: string[] = []
+      for (const imageId of removeIds) {
+        try {
+          await api.deletePropertyImage(propertyId, imageId, user.id)
+        } catch (caught) {
+          failures.push(caught instanceof Error ? caught.message : 'Error inesperado')
+        }
+      }
+      // One by one, so the gallery keeps the order the owner chose
+      for (const file of files) {
+        try {
+          await api.addPropertyImage(propertyId, user.id, file)
+        } catch (caught) {
+          const message = caught instanceof Error ? caught.message : 'Error inesperado'
+          failures.push(`${file.name}: ${message}`)
+        }
+      }
+
+      if (removeIds.length || files.length) await refresh()
+      return failures
+    },
+    [refresh, user],
+  )
+
   const pay = useCallback(
     async (quote: Quote) => {
       if (!user || user.role !== 'cliente') {
@@ -549,6 +585,7 @@ export function BrisaProvider({ children }: { children: ReactNode }) {
     publish,
     setPropertyStatus,
     remove,
+    syncPropertyImages,
     pay,
     cancelBooking,
     toggleFavorite,
