@@ -6,8 +6,8 @@ import type { UnitOfWork } from '@/application/ports/out/repositories/unit-of-wo
 import type { RentalKey } from '@/domain/rental.js';
 
 // Cancels an upcoming rental: the owner gives back the net amount and the
-// administrator the commission, so the client recovers the whole cost in
-// its bank account (simulated, outside the app).
+// administrator keeps the commission, so the client recovers the cost
+// minus the commission in its bank account (simulated, outside the app).
 // The PAYMENT transaction is kept and a REFUND is added.
 export class CancelRentalUseCase {
   constructor(

@@ -35,9 +35,9 @@ export class Bank {
     return administrator.receivePayment(owner, amount, meta);
   }
 
-  // Inverse movement when a rental is cancelled: the owner and the
-  // administrator give the whole cost back to the client's bank account
-  // (simulated, outside the app)
+  // Movement when a rental is cancelled: the owner gives the net amount
+  // back to the client's bank account (simulated, outside the app) and
+  // the administrator keeps the commission
   refundPayment(
     client: Client,
     administrator: Administrator,

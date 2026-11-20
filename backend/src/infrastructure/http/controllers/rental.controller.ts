@@ -126,7 +126,7 @@ export class RentalController {
   @Delete(':propertyId/:clientId/:startDate')
   @ApiOperation({
     summary:
-      'Cancel a rental: the owner and the administrator give the whole cost back to the client bank account (simulated)',
+      'Cancel a rental: the owner gives the net amount (cost minus the 10% commission, which the administrator keeps) back to the client bank account (simulated)',
   })
   @ApiParam({
     name: 'propertyId',
@@ -144,11 +144,13 @@ export class RentalController {
     example: '2026-11-10',
     format: 'date',
   })
-  @ApiOkResponse({ description: 'Rental cancelled and cost refunded' })
+  @ApiOkResponse({
+    description: 'Rental cancelled and cost minus the commission refunded',
+  })
   @ApiNotFoundResponse({ description: 'Rental not found' })
   @ApiConflictResponse({
     description:
-      'The rental has already started, has no cost, or the owner or administrator balance is not enough to refund it',
+      'The rental has already started, has no cost, or the owner balance is not enough to refund it',
   })
   async cancel(
     @Param('propertyId', ParseUUIDPipe) propertyId: string,

@@ -23,6 +23,7 @@ import {
   createDefaultFilters,
   findProperty,
   isValidAccountNumber,
+  isValidPhone,
 } from '../domain/brisa'
 import { api, type ProfilePayload } from '../services/api'
 import type {
@@ -262,6 +263,10 @@ export function BrisaProvider({ children }: { children: ReactNode }) {
 
       if (!name || !email || !data.phone.trim()) {
         throw new Error('Corrige los campos marcados')
+      }
+
+      if (!isValidPhone(data.phone)) {
+        throw new Error('El teléfono debe tener 10 dígitos, por ejemplo 333 333 3333')
       }
 
       if (password.length < 6) {

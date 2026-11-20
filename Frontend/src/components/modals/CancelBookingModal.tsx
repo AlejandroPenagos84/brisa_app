@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useBrisa } from '../../context/BrisaContext'
-import { formatDate, money } from '../../domain/brisa'
+import { formatDate, money, refundFor } from '../../domain/brisa'
 import type { Booking } from '../../types'
 import { Button } from '../ui/Button'
 import { Dialog } from '../ui/Dialog'
@@ -9,6 +9,7 @@ export function CancelBookingModal({ booking }: { booking: Booking }) {
   const { cancelBooking, closeModal, showToast } = useBrisa()
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const refund = refundFor(booking.total)
 
   async function confirmCancellation() {
     setError('')
@@ -28,7 +29,10 @@ export function CancelBookingModal({ booking }: { booking: Booking }) {
     <Dialog>
       <h2>Cancelar reserva</h2>
       <p>{booking.title} · {formatDate(booking.start)} → {formatDate(booking.end)}</p>
-      <p>Se te devolverán {money(booking.total)} a tu cuenta bancaria.</p>
+      <p>
+        Se te devolverán {money(refund)} a tu cuenta bancaria. La comisión de
+        Brisa ({money(booking.total - refund)}) no es reembolsable.
+      </p>
       {error ? <p className="error" role="alert">{error}</p> : null}
       <div className="row">
         <Button variant="primary" onClick={() => void confirmCancellation()} disabled={submitting}>
