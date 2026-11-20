@@ -2,7 +2,29 @@ import { describe, expect, it } from 'vitest'
 import type { DbState } from '../types'
 import type { ApiRental, ApiReservation } from '../services/api'
 import { adaptProperty, adaptRental, adaptReservation } from './adapters'
-import { createDefaultFilters, filterCatalog, isPropertyActive, quoteFor, today } from './brisa'
+import { createDefaultFilters, filterCatalog, formatPhone, isPropertyActive, isValidPhone, phoneDigits, quoteFor, refundFor, today } from './brisa'
+
+describe('phone', () => {
+  it('keeps at most 10 digits and groups them as 3-3-4', () => {
+    expect(phoneDigits('33a3-333 33339999')).toBe('3333333333')
+    expect(formatPhone('3333333333')).toBe('333 333 3333')
+    expect(formatPhone('33333')).toBe('333 33')
+  })
+
+  it('requires exactly 10 digits', () => {
+    expect(isValidPhone('3333333333')).toBe(true)
+    expect(isValidPhone('333 333 3333')).toBe(true)
+    expect(isValidPhone('333333333')).toBe(false)
+    expect(isValidPhone('333-333-3333')).toBe(false)
+  })
+})
+
+describe('refundFor', () => {
+  it('returns the total minus the 10% commission', () => {
+    expect(refundFor(300)).toBe(270)
+    expect(refundFor(640_000.5)).toBe(576_000.45)
+  })
+})
 
 function addDays(date: string, days: number): string {
   const next = new Date(date)

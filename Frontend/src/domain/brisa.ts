@@ -17,6 +17,17 @@ export function money(value: number): string {
   }).format(value)
 }
 
+// Same rate and rounding as the backend (Administrator.COMMISSION_RATE):
+// the commission is rounded to the nearest cent and Brisa keeps it when a
+// rental is cancelled
+export const COMMISSION_RATE = 0.1
+
+export function refundFor(total: number): number {
+  const totalInCents = Math.round(total * 100)
+  const commissionInCents = Math.round(totalInCents * COMMISSION_RATE)
+  return (totalInCents - commissionInCents) / 100
+}
+
 export function today(): string {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: import.meta.env.VITE_APP_TIME_ZONE || 'America/Bogota',
@@ -44,6 +55,27 @@ export function formatAccountNumber(value: string): string {
 
 export function isValidAccountNumber(value: string): boolean {
   return ACCOUNT_NUMBER_PATTERN.test(value)
+}
+
+export const PHONE_DIGITS = 10
+// Formatted length: "333 333 3333"
+export const PHONE_LENGTH = 12
+
+// Keeps only digits (max 10): "3a3 33-33333" -> "33333333"
+export function phoneDigits(value: string): string {
+  return value.replace(/\D/g, '').slice(0, PHONE_DIGITS)
+}
+
+// Groups the digits as 3-3-4: "3333333333" -> "333 333 3333"
+export function formatPhone(value: string): string {
+  const digits = phoneDigits(value)
+  return [digits.slice(0, 3), digits.slice(3, 6), digits.slice(6)]
+    .filter(Boolean)
+    .join(' ')
+}
+
+export function isValidPhone(value: string): boolean {
+  return /^\d{10}$/.test(value.replace(/\s/g, ''))
 }
 
 export function createDefaultFilters(): Filters {

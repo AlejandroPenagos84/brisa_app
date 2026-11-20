@@ -19,9 +19,7 @@ import { DomainErrorCode } from './errors/domain-error-codes.js';
 import {
   addToBalance,
   assertValidBalance,
-  isBalanceEnough,
   splitByRate,
-  subtractFromBalance,
 } from './money.js';
 import type { Owner } from './owner.js';
 
@@ -78,14 +76,16 @@ export class Administrator {
     );
   }
 
-  // A rental of grossAmount was cancelled: the commission and the net
-  // amount go back, so the client recovers the whole amount
+  // A rental of grossAmount was cancelled: the administrator keeps the
+  // commission and only the owner gives the net amount back, so the
+  // client recovers grossAmount minus the commission. The REFUND records
+  // only the money that moves: gross = net, commission = 0.
   refundPayment(
     owner: Owner,
     grossAmount: number,
     meta: TransactionMeta,
   ): AdministratorTransaction {
-    const { part: commission, rest: netAmount } = splitByRate(
+    const { rest: netAmount } = splitByRate(
       grossAmount,
       Administrator.COMMISSION_RATE,
     );
@@ -97,23 +97,13 @@ export class Administrator {
       );
     }
 
-    if (!isBalanceEnough(this.balance, commission)) {
-      throw new DomainError(
-        DomainErrorCode.INSUFFICIENT_BALANCE,
-        'The administrator balance is not enough to refund the commission',
-      );
-    }
-
     owner.returnPayment(netAmount);
-    if (commission > 0) {
-      this.balance = subtractFromBalance(this.balance, commission);
-    }
 
     return this.createTransaction(
       owner,
       TransactionType.REFUND,
-      grossAmount,
-      commission,
+      netAmount,
+      0,
       netAmount,
       meta,
     );

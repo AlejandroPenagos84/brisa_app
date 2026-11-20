@@ -65,7 +65,7 @@ export function AdminPage() {
         <section className="panel admin-stat">
           <small>Saldo de comisiones</small>
           <h2>{money(administrator?.balance ?? 0)}</h2>
-          <p className="muted small">Comisiones de pagos y devoluciones</p>
+          <p className="muted small">Comisiones de los pagos, no reembolsables</p>
         </section>
         <section className="panel admin-stat">
           <small>Volumen pagado</small>

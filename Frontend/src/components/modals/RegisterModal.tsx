@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useBrisa } from '../../context/BrisaContext'
+import { formatPhone, isValidPhone, PHONE_LENGTH, phoneDigits } from '../../domain/brisa'
 import type { RegistrationDraft, Role } from '../../types'
 import { Button } from '../ui/Button'
 import { Dialog } from '../ui/Dialog'
@@ -37,6 +38,10 @@ export function RegisterModal({ draft }: RegisterModalProps) {
 
       if (duplicated) {
         throw new Error('Ya existe una cuenta con estos datos')
+      }
+
+      if (!isValidPhone(form.phone)) {
+        throw new Error('El teléfono debe tener 10 dígitos, por ejemplo 333 333 3333')
       }
 
       if (form.role === 'cliente' && !form.cityId) {
@@ -97,10 +102,15 @@ export function RegisterModal({ draft }: RegisterModalProps) {
           label="Teléfono"
           name="phone"
           type="tel"
-          value={form.phone}
-          maxLength={20}
+          inputMode="numeric"
+          autoComplete="tel-national"
+          placeholder="333 333 3333"
+          value={formatPhone(form.phone)}
+          maxLength={PHONE_LENGTH}
+          pattern="\d{3} \d{3} \d{4}"
+          title="Ingresa 10 dígitos, por ejemplo 333 333 3333"
           required
-          onChange={(event) => update({ phone: event.target.value })}
+          onChange={(event) => update({ phone: phoneDigits(event.target.value) })}
         />
         {form.role === 'cliente' ? (
           <SelectField
